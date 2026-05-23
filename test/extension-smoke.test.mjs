@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { existsSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerVisualProofTools } from '../src/visual-proof-tools.mjs';
@@ -8,6 +9,17 @@ import { loadProofFromFile } from '../src/visual-proof-core.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const fixturePath = path.join(repoRoot, 'examples/button-overlap-proof.json');
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function assertDefaultOutputUnderVisualProof(cwd, outDir) {
+  const relative = path.relative(cwd, outDir);
+  assert.ok(relative.startsWith(`.visual-proof${path.sep}`), `expected ${outDir} to be under ${cwd}/.visual-proof/`);
+  const leaf = path.basename(outDir);
+  assert.ok(!/^\.+$/.test(leaf), `expected default output leaf not to be dot-only: ${leaf}`);
+}
 
 async function test(name, fn) {
   try {
@@ -67,4 +79,49 @@ await test('registered create tool writes a validated proof artifact', async () 
   const result = await tool('visual_proof_create').handler({ proof, outputDir: outDir }, { cwd: repoRoot });
   assert.equal(result.details.verdict, 'fixed');
   assert.ok(existsSync(result.details.proofPath));
+});
+
+await test('registered create tool writes a before-only draft proof artifact', async () => {
+  const outDir = path.join('/tmp', `visual-proof-extension-draft-${process.pid}`);
+  rmSync(outDir, { recursive: true, force: true });
+  const proof = clone(loadProofFromFile(fixturePath));
+  delete proof.observations.after;
+  const result = await tool('visual_proof_create').handler({ proof, outputDir: outDir }, { cwd: repoRoot });
+  assert.equal(result.details.status, 'draft');
+  assert.equal(result.details.verdict, 'draft');
+  assert.ok(existsSync(result.details.proofPath));
+  assert.match(result.content[0].text, /draft/);
+});
+
+await test('tool default output dirs stay under .visual-proof for dot-like ids', async () => {
+  const cwd = path.join('/tmp', `visual-proof-extension-safe-slug-${process.pid}`);
+  rmSync(cwd, { recursive: true, force: true });
+  mkdirSync(cwd, { recursive: true });
+  for (const id of ['.', '..', '...']) {
+    const proof = clone(loadProofFromFile(fixturePath));
+    proof.id = id;
+    const result = await tool('visual_proof_create').handler({ proof, fileName: `${id.length}.json` }, { cwd });
+    const outDir = path.dirname(result.details.proofPath);
+    assertDefaultOutputUnderVisualProof(cwd, outDir);
+    assert.ok(existsSync(result.details.proofPath));
+  }
+});
+
+await test('CLI default output dir stays under .visual-proof for path-normalizing ids', async () => {
+  const cwd = path.join('/tmp', `visual-proof-cli-safe-slug-${process.pid}`);
+  rmSync(cwd, { recursive: true, force: true });
+  mkdirSync(cwd, { recursive: true });
+  const proof = clone(loadProofFromFile(fixturePath));
+  proof.id = '..';
+  const proofPath = path.join(cwd, 'proof.json');
+  writeFileSync(proofPath, `${JSON.stringify(proof, null, 2)}\n`, 'utf8');
+  const result = spawnSync(process.execPath, [path.join(repoRoot, 'bin/visual-proof.mjs'), 'evaluate', 'proof.json'], {
+    cwd,
+    encoding: 'utf8'
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assertDefaultOutputUnderVisualProof(cwd, output.artifacts.outDir);
+  assert.ok(existsSync(output.artifacts.evaluation));
+  assert.equal(existsSync(path.join(cwd, 'evaluation.json')), false);
 });

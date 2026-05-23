@@ -77,6 +77,19 @@ test('example proof distinguishes before overlap bug from after fix', () => {
   assert.equal(overlapAfter.passed, true);
 });
 
+test('full proof validation requires after video metadata', () => {
+  const proof = clone(fixture);
+  delete proof.observations.after.video;
+  assert.throws(() => evaluateProof(proof), /observations\.after\.video is required/);
+});
+
+test('full proof validation requires after video frame metadata', () => {
+  const proof = clone(fixture);
+  delete proof.observations.after.video.frameCount;
+  delete proof.observations.after.video.sampledFrames;
+  assert.throws(() => evaluateProof(proof), /observations\.after\.video must include frameCount or sampledFrames/);
+});
+
 test('visible predicate fails when explicit visibility evidence is missing', () => {
   const proof = clone(fixture);
   delete proof.observations.after.evidence.visibility.submit_button;
@@ -102,6 +115,24 @@ test('clickable predicate fails when explicit click target evidence is missing',
   const result = evaluation.after.results.find((entry) => entry.id === 'submit_button_clickable');
   assert.equal(result.passed, false);
   assert.match(result.reason, /missing explicit click target evidence/);
+});
+
+test('visible and clickable predicates require referenced subject primitives even when evidence exists', () => {
+  const observation = {
+    primitives: [],
+    evidence: {
+      visibility: { ghost_button: { visible: true } },
+      clickTargets: { ghost_button: { clickable: true } }
+    }
+  };
+  assert.throws(
+    () => evaluatePredicate({ id: 'ghost_visible', type: 'visible', subject: 'ghost_button' }, observation, 'after'),
+    /Primitive "ghost_button" was not found/
+  );
+  assert.throws(
+    () => evaluatePredicate({ id: 'ghost_clickable', type: 'clickable', subject: 'ghost_button' }, observation, 'after'),
+    /Primitive "ghost_button" was not found/
+  );
 });
 
 test('aligned, count_equals, and path_continuous predicates are deterministic', () => {

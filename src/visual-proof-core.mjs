@@ -69,8 +69,12 @@ function assertArray(value, at) {
   return value;
 }
 
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
 function assertNonEmptyString(value, at) {
-  if (typeof value !== 'string' || value.trim() === '') {
+  if (!isNonEmptyString(value)) {
     throw new VisualProofError(`${at} must be a non-empty string`, { at, value });
   }
   return value;
@@ -140,28 +144,34 @@ function validateScreenshot(screenshot, at) {
   assertNonEmptyString(screenshot.path, `${at}.path`);
   assertPositiveNumber(screenshot.width, `${at}.width`);
   assertPositiveNumber(screenshot.height, `${at}.height`);
-  if (screenshot.viewport !== undefined) {
-    assertObject(screenshot.viewport, `${at}.viewport`);
-    assertPositiveNumber(screenshot.viewport.width, `${at}.viewport.width`);
-    assertPositiveNumber(screenshot.viewport.height, `${at}.viewport.height`);
-  }
-  if (screenshot.url !== undefined && typeof screenshot.url !== 'string') {
-    throw new VisualProofError(`${at}.url must be a string when present`, { at: `${at}.url` });
-  }
-  if (screenshot.route !== undefined && typeof screenshot.route !== 'string') {
-    throw new VisualProofError(`${at}.route must be a string when present`, { at: `${at}.route` });
+  assertObject(screenshot.viewport, `${at}.viewport`);
+  assertPositiveNumber(screenshot.viewport.width, `${at}.viewport.width`);
+  assertPositiveNumber(screenshot.viewport.height, `${at}.viewport.height`);
+
+  if (screenshot.url !== undefined) assertNonEmptyString(screenshot.url, `${at}.url`);
+  if (screenshot.route !== undefined) assertNonEmptyString(screenshot.route, `${at}.route`);
+  if (!isNonEmptyString(screenshot.url) && !isNonEmptyString(screenshot.route)) {
+    throw new VisualProofError(`${at} must include route or url`, {
+      at,
+      required: ['route', 'url']
+    });
   }
 }
 
-function validateVideo(video, at) {
+function validateVideo(video, at, options = {}) {
   assertObject(video, at);
   assertNonEmptyString(video.path, `${at}.path`);
-  const hasDuration = video.durationMs !== undefined || video.durationSeconds !== undefined;
+  const hasDuration = video.durationMs != null || video.durationSeconds != null;
   if (!hasDuration) {
     throw new VisualProofError(`${at} must include durationMs or durationSeconds`, { at });
   }
   optionalPositiveNumber(video.durationMs, `${at}.durationMs`);
   optionalPositiveNumber(video.durationSeconds, `${at}.durationSeconds`);
+
+  const hasFrameMetadata = video.frameCount !== undefined || video.sampledFrames !== undefined;
+  if (options.requireFrameMetadata && !hasFrameMetadata) {
+    throw new VisualProofError(`${at} must include frameCount or sampledFrames`, { at });
+  }
   if (video.frameCount !== undefined) {
     assertPositiveNumber(video.frameCount, `${at}.frameCount`);
   }
@@ -217,14 +227,21 @@ function validatePrimitive(primitive, at) {
   });
 }
 
-function validateObservation(observation, phase) {
+function validateObservation(observation, phase, options = {}) {
   assertObject(observation, `observations.${phase}`);
   if (observation.coordinateSpace !== undefined) {
     normalizeCoordinateSpace(observation.coordinateSpace, `observations.${phase}`);
   }
   validateScreenshot(observation.screenshot, `observations.${phase}.screenshot`);
+  if (options.requireVideo && observation.video === undefined) {
+    throw new VisualProofError(`observations.${phase}.video is required`, {
+      at: `observations.${phase}.video`
+    });
+  }
   if (observation.video !== undefined) {
-    validateVideo(observation.video, `observations.${phase}.video`);
+    validateVideo(observation.video, `observations.${phase}.video`, {
+      requireFrameMetadata: options.requireVideoFrameMetadata === true
+    });
   }
 
   const primitives = assertArray(observation.primitives, `observations.${phase}.primitives`);
@@ -257,7 +274,7 @@ function validatePredicate(predicate, index) {
   }
 }
 
-export function validateProof(proof) {
+function validateProofPreamble(proof) {
   assertObject(proof, 'proof');
   if (proof.schemaVersion !== undefined && proof.schemaVersion !== VISUAL_PROOF_SCHEMA_VERSION) {
     throw new VisualProofError(`schemaVersion must be ${VISUAL_PROOF_SCHEMA_VERSION}`, {
@@ -269,9 +286,10 @@ export function validateProof(proof) {
     normalizeCoordinateSpace(proof.coordinateSpace, 'coordinateSpace');
   }
   if (proof.id !== undefined) assertNonEmptyString(proof.id, 'id');
-  assertObject(proof.observations, 'observations');
-  validateObservation(proof.observations.before, 'before');
-  validateObservation(proof.observations.after, 'after');
+  return assertObject(proof.observations, 'observations');
+}
+
+function validatePredicateList(proof) {
   const predicates = assertArray(proof.predicates, 'predicates');
   if (predicates.length === 0) {
     throw new VisualProofError('predicates must include at least one predicate', { at: 'predicates' });
@@ -286,6 +304,26 @@ export function validateProof(proof) {
     }
     seen.add(predicate.id);
   });
+  return predicates;
+}
+
+export function validateDraftProof(proof) {
+  const observations = validateProofPreamble(proof);
+  validateObservation(observations.before, 'before');
+  if (observations.after !== undefined) {
+    throw new VisualProofError('draft proofs must omit observations.after; use validateProof for complete before/after proofs', {
+      at: 'observations.after'
+    });
+  }
+  validatePredicateList(proof);
+  return proof;
+}
+
+export function validateProof(proof) {
+  const observations = validateProofPreamble(proof);
+  validateObservation(observations.before, 'before');
+  validateObservation(observations.after, 'after', { requireVideo: true, requireVideoFrameMetadata: true });
+  validatePredicateList(proof);
   return proof;
 }
 
@@ -657,6 +695,7 @@ function bucketLookup(bucket, id) {
 
 function evaluateVisible(predicate, observation, phase) {
   const id = subjectId(predicate, `predicate ${predicate.id}`);
+  getPrimitive(observation, id, phase);
   const evidence = observation.evidence || {};
   const record = bucketLookup(evidence.visibility, id);
   if (record === undefined) {
@@ -726,6 +765,7 @@ function evaluateTextPresent(predicate, observation, phase) {
 
 function evaluateClickable(predicate, observation, phase) {
   const id = subjectId(predicate, `predicate ${predicate.id}`);
+  getPrimitive(observation, id, phase);
   const evidence = observation.evidence || {};
   const record = bucketLookup(evidence.clickTargets, id);
   if (record === undefined) {
@@ -995,6 +1035,7 @@ export default {
   VISUAL_PROOF_SCHEMA_VERSION,
   VisualProofError,
   validateProof,
+  validateDraftProof,
   buildPrimitiveMap,
   getPrimitive,
   boxToPixels,

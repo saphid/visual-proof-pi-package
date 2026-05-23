@@ -6,6 +6,7 @@ import {
   evaluateProof,
   generateMarkdownReport,
   loadProofFromFile,
+  validateDraftProof,
   validateProof,
   writeEvaluationArtifacts
 } from './visual-proof-core.mjs';
@@ -15,10 +16,12 @@ function isObject(value) {
 }
 
 function safeSlug(value) {
-  return String(value || 'visual-proof')
+  const slug = String(value || 'visual-proof')
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'visual-proof';
+    .replace(/^-+|-+$/g, '');
+  if (!slug || /^\.+$/.test(slug)) return 'visual-proof';
+  return slug;
 }
 
 function cwdFromContext(ctx) {
@@ -89,6 +92,10 @@ function buildProofFromCreateInput(input) {
   };
 }
 
+function isBeforeOnlyDraft(proof) {
+  return isObject(proof?.observations) && proof.observations.before !== undefined && proof.observations.after === undefined;
+}
+
 const proofInputSchema = {
   type: 'object',
   properties: {
@@ -103,16 +110,16 @@ export function createVisualProofToolDefinitions() {
   return [
     {
       name: 'visual_proof_create',
-      description: 'Create a Visual Proof Object JSON artifact from supplied before/after observations, visual primitives, predicates, and evidence metadata. Does not capture screenshots itself.',
+      description: 'Create a complete Visual Proof Object JSON artifact or a before-only draft from supplied observations, visual primitives, predicates, and evidence metadata. Does not capture screenshots itself.',
       inputSchema: {
         type: 'object',
         properties: {
-          proof: { type: 'object', description: 'Complete Visual Proof Object. If provided, other proof-building fields are ignored.' },
+          proof: { type: 'object', description: 'Complete Visual Proof Object or before-only draft. If provided, other proof-building fields are ignored.' },
           id: { type: 'string' },
           title: { type: 'string' },
           description: { type: 'string' },
           coordinateSpace: { type: 'string', enum: ['pixel', 'pixels', 'normalized', 'normalised'] },
-          observations: { type: 'object', description: 'Object with before and after observations.' },
+          observations: { type: 'object', description: 'Object with before and after observations, or only before for a draft create.' },
           predicates: { type: 'array', description: 'Visual predicates to evaluate in before and after observations.' },
           outputDir: { type: 'string', description: 'Explicit output directory. Defaults to .visual-proof/<proof-id> under ctx.cwd.' },
           fileName: { type: 'string', description: 'Optional JSON filename. Defaults to proof.json.' }
@@ -122,7 +129,12 @@ export function createVisualProofToolDefinitions() {
       },
       handler: async (input = {}, ctx = {}) => {
         const proof = buildProofFromCreateInput(input);
-        validateProof(proof);
+        const draft = isBeforeOnlyDraft(proof);
+        if (draft) {
+          validateDraftProof(proof);
+        } else {
+          validateProof(proof);
+        }
         const outDir = resolveOutputDir(input, ctx, proof);
         mkdirSync(outDir, { recursive: true });
         const fileName = input.fileName || 'proof.json';
@@ -131,6 +143,17 @@ export function createVisualProofToolDefinitions() {
         }
         const proofPath = path.join(outDir, fileName);
         writeFileSync(proofPath, `${JSON.stringify(proof, null, 2)}\n`, 'utf8');
+        if (draft) {
+          return toolResult(
+            `Created visual proof draft ${proof.id || '(unnamed)'}; add an after observation before evaluation/reporting.`,
+            {
+              proofPath,
+              status: 'draft',
+              verdict: 'draft',
+              proofId: proof.id || null
+            }
+          );
+        }
         const evaluation = evaluateProof(proof);
         return toolResult(
           `Created visual proof ${proof.id || '(unnamed)'} with verdict ${evaluation.verdict}.`,

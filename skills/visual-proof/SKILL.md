@@ -27,6 +27,7 @@ Do not claim the UI is visually fixed from code inspection alone. Build a before
 
 3. **Save the before proof**
    - Use `visual_proof_create` if you are in Pi with this extension loaded, or write a VP1 JSON file directly.
+   - `visual_proof_create` may save a before-only draft containing `observations.before`; it returns `status`/`verdict` `draft` until after evidence is added.
    - The before observation should show at least one objective failing predicate for a bug fix.
 
 4. **Fix the UI**
@@ -39,7 +40,7 @@ Do not claim the UI is visually fixed from code inspection alone. Build a before
    - Add updated explicit evidence for visibility/text/clickability predicates.
 
 6. **Verify and report**
-   - Run `visual_proof_evaluate` or `node bin/visual-proof.mjs evaluate <proof.json> --out <dir>`.
+   - Run `visual_proof_evaluate` or `node bin/visual-proof.mjs evaluate <proof.json> --out <dir>` only after the proof has both `observations.before` and `observations.after` with required screenshot metadata and after video metadata.
    - The strongest bug-fix verdict is `fixed`: before predicates fail and after predicates pass.
    - Attach or reference `evaluation.json`, `report.md`, and overlay SVGs in the final handoff.
 

@@ -10,6 +10,13 @@ Date: 2026-05-23
 - Reports include machine-readable `evaluation.json`, human-readable `report.md`, and SVG overlays that reference screenshots without embedding raster data.
 - The example fixture is synthetic by design: it proves the before/after predicate workflow deterministically without committing screenshots, videos, browser output, or generated artifacts.
 
+## Review fix decisions — 2026-05-23
+
+- Full proof validation now enforces required before/after screenshot metadata (`path`, dimensions, viewport dimensions, and route or URL) plus required after video metadata (`path`, duration, and frame count or sampled frames) in the core paths used by CLI/tools/reports.
+- `visual_proof_create` uses a separate before-only draft validator when `observations.after` is omitted; it writes the draft and returns `status`/`verdict` `draft`, while evaluate/report/CLI still require a complete proof.
+- Default output slugs in both CLI and tool helpers now fall back for dot-only/path-normalizing ids so generated artifacts remain under `.visual-proof/` instead of collapsing to the cwd/project root.
+- `visible` and `clickable` predicates now require the referenced subject primitive to exist before explicit evidence can pass them.
+
 ## Limitations
 
 - VP1 verifies supplied primitives/evidence only. It does not capture screenshots, inspect pixels, verify file existence, run OCR, drive browsers, or call a VLM.
@@ -22,9 +29,10 @@ Date: 2026-05-23
 All required validation was run locally without installing dependencies:
 
 - `npm run check` — exit 0. Validated manifest/resources, fixture metadata, core tests, extension smoke, and CLI demo under `/tmp/visual-proof-package-check`.
-- `node test/core.test.mjs` — exit 0. Covered geometry, normalized conversion, before/after verdict, evidence-backed failures, alignment/count/path predicates, malformed errors, and report artifacts.
-- `node test/extension-smoke.test.mjs` — exit 0. Registered `visual_proof_create`, `visual_proof_evaluate`, and `visual_proof_report` on a mock Pi object and evaluated the fixture through the registered handler.
-- `node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-demo` — exit 0. Verdict `fixed`; generated `evaluation.json`, `report.md`, `before-overlay.svg`, and `after-overlay.svg`.
+- `node test/core.test.mjs` — exit 0. Covered geometry, normalized conversion, before/after verdict, required after video/frame metadata failures, evidence-backed failures, nonexistent visible/clickable subjects, alignment/count/path predicates, malformed errors, and report artifacts.
+- `node test/extension-smoke.test.mjs` — exit 0. Registered `visual_proof_create`, `visual_proof_evaluate`, and `visual_proof_report` on a mock Pi object; covered fixture evaluation, before-only draft create, tool default slug safety, and CLI default slug safety.
+- `node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-demo-fix` — exit 0. Verdict `fixed`; generated `evaluation.json`, `report.md`, `before-overlay.svg`, and `after-overlay.svg`.
+- CLI default output sanity with proof id `..` — exit 0. Wrote artifacts under `/tmp/visual-proof-cli-default-sanity-*/.visual-proof/visual-proof` and did not create `evaluation.json` in the temp cwd.
 
 Demo verdict details:
 

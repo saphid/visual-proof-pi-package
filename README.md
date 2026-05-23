@@ -7,7 +7,7 @@ This package implements the proof artifact/verifier layer. It does **not** captu
 ## What it exposes
 
 - One Pi extension: `extensions/visual-proof/index.ts`
-  - `visual_proof_create`
+  - `visual_proof_create` (complete proofs or before-only drafts)
   - `visual_proof_evaluate`
   - `visual_proof_report`
 - One skill: `skills/visual-proof/SKILL.md`
@@ -54,9 +54,10 @@ All validation is pure Node.js and dependency-free.
 3. Ground relevant visual primitives (`box`, `point`, `path`) in the screenshot.
 4. Add predicates that express the desired visual truth.
 5. Add explicit evidence for visibility, text, and clickability when those predicates are needed.
-6. Fix the UI.
-7. Capture after screenshot metadata and after video metadata.
-8. Evaluate the proof and save the report next to the bug fix evidence.
+6. Optionally save a before-only draft with `visual_proof_create`; it returns `status`/`verdict` `draft` and is not evaluable until after evidence is added.
+7. Fix the UI.
+8. Capture after screenshot metadata and after video metadata.
+9. Evaluate the complete proof and save the report next to the bug fix evidence.
 
 See `skills/visual-proof/SKILL.md` for the full Pi skill instructions.
 

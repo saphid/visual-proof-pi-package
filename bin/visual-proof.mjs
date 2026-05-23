@@ -28,10 +28,12 @@ function parseArgs(argv) {
 }
 
 function safeSlug(value) {
-  return String(value || 'visual-proof')
+  const slug = String(value || 'visual-proof')
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'visual-proof';
+    .replace(/^-+|-+$/g, '');
+  if (!slug || /^\.+$/.test(slug)) return 'visual-proof';
+  return slug;
 }
 
 function defaultOutDir(proof, proofPath) {

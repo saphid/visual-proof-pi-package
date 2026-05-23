@@ -4,8 +4,8 @@ VP1 is a dependency-free JSON contract for proving UI visual bugs with grounded 
 
 A proof contains:
 
-- `observations.before` and `observations.after` with screenshot metadata.
-- Optional `observations.after.video` metadata for acceptance evidence.
+- `observations.before` and `observations.after` with required screenshot metadata for full evaluation.
+- Required `observations.after.video` metadata for full evaluation acceptance evidence. Before-only drafts created by `visual_proof_create` may omit `observations.after` until they are completed.
 - Visual primitives: `box`, `point`, and `path` in either `pixel` or `normalized` coordinates.
 - Predicates evaluated deterministically against both observations.
 - Explicit evidence for predicates that cannot be inferred safely from geometry alone.
@@ -59,6 +59,10 @@ Evidence-backed predicates:
 - `clickable`: requires `observation.evidence.clickTargets[subject].clickable === true`.
 
 Evidence-backed predicates never infer from screenshots, OCR, pixels, or the DOM. Missing evidence fails the predicate rather than silently passing.
+
+## Metadata requirements
+
+For full proof evaluation, both screenshots must include `path`, `width`, `height`, `viewport.width`, `viewport.height`, and at least one of `route` or `url`. The after observation must include `video.path`, `durationMs` or `durationSeconds`, and `frameCount` or `sampledFrames`.
 
 ## Verdicts
 
