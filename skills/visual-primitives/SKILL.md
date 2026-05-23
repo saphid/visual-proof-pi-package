@@ -14,6 +14,7 @@ This is the drawing/pointing layer only. It helps close the reference gap betwee
 - Marking visible objects in supplied screenshots as VP1 `box`, `point`, or `path` primitives.
 - Assigning stable, meaningful primitive ids such as `submit_button`, `footer`, or `focus_path`.
 - Recording coordinate space and screenshot dimensions clearly enough for deterministic evaluation.
+- Reviewing or correcting candidate primitives supplied by `dom-bridge` when the screenshot is the source of truth.
 - Optionally suggesting predicates for `visual-proof` to review and use.
 - Optionally preparing a draft handoff payload for the `visual-proof` skill.
 
@@ -21,7 +22,7 @@ This is the drawing/pointing layer only. It helps close the reference gap betwee
 
 This skill does not capture screenshots, drive a browser, inspect DOM, map selectors, run OCR, call VLMs, fix application code, evaluate complete proofs, or declare a final fixed verdict. It produces drawing/pointing data only.
 
-If DOM boxes, browser hit tests, OCR text, or videos are needed, treat them as outputs from separate future adapters such as `browser-capture` or `dom-bridge`. If code changes are needed, they belong outside this skill or in a future `visual-fix-loop` orchestrator.
+Use `browser-capture` for capture/metadata. Use `dom-bridge` for selector-derived boxes, hit-test evidence, computed-style evidence, accessibility evidence, or text evidence. Use `visual-fix-loop` only to coordinate the larger bug-fix loop. Final VP1 verdicts remain with `visual-proof`.
 
 ## Inputs to request
 
@@ -33,6 +34,7 @@ Ask for the smallest set of data needed to ground the screenshot:
 - The visual target: bug description, desired relationship, or feature acceptance claim.
 - Whether coordinates should be `pixel` or `normalized`.
 - Any known before/after pairing so ids can remain stable across observations.
+- Optional candidate primitives from `dom-bridge`, clearly marked as candidates until reviewed against the screenshot.
 
 Do not pretend to have browser, DOM, OCR, or VLM evidence when it was not supplied.
 
@@ -90,7 +92,7 @@ Before handing off primitives:
 - Paths have enough ordered points to make continuity meaningful.
 - Every predicate suggestion references existing primitive ids.
 - Uncertainty is surfaced in notes rather than hidden in overconfident coordinates.
-- Evidence-backed claims such as visible text or clickability are left for explicit evidence adapters or for the `visual-proof` skill to require.
+- Evidence-backed claims such as visible text or clickability are left for `dom-bridge`, other explicit evidence adapters, or for the `visual-proof` skill to require.
 
 ## Handoff to visual-proof
 

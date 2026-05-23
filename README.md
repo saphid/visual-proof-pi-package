@@ -1,8 +1,8 @@
 # Visual Proof Pi Package
 
-A dependency-free Pi package for proving UI visual fixes with Visual Proof Objects (VP1): screenshot/video metadata, grounded boxes/points/paths, deterministic predicates, and concise reports.
+A dependency-free Pi package for proving UI visual fixes with Visual Proof Objects (VP1): screenshot/video metadata, grounded boxes/points/paths, deterministic predicates, explicit evidence, and concise reports.
 
-This package is split into composable skills. It does **not** capture screenshots, drive a browser, inspect DOM, run OCR, call a VLM, perform pixel diffs, or fix app code. Browser workers, Playwright, DOM bridges, OCR/VLM tooling, and fix loops can be separate adapters that populate the VP1 JSON schema.
+The package is split into composable Pi skills. It still does **not** ship browser automation dependencies, DOM runtime libraries, OCR, VLM calls, pixel diffing, or project-specific code fixing. The adapter skills are workflow contracts over supplied data and already-available tools; the deterministic VP1 verifier remains the final proof boundary.
 
 ## What it exposes
 
@@ -10,9 +10,12 @@ This package is split into composable skills. It does **not** capture screenshot
   - `visual_proof_create` (complete proofs or before-only drafts)
   - `visual_proof_evaluate`
   - `visual_proof_report`
-- Two Pi skills:
+- Five Pi skills:
   - `skills/visual-proof/SKILL.md` — proof-only VP1 creation/evaluation from supplied metadata, primitives, predicates, and evidence.
   - `skills/visual-primitives/SKILL.md` — drawing/pointing-only production of VP1-compatible boxes, points, and paths from supplied screenshots.
+  - `skills/browser-capture/SKILL.md` — capture/metadata workflow for screenshot, route/URL, viewport, and after-video metadata from supplied or existing browser-tool outputs.
+  - `skills/dom-bridge/SKILL.md` — DOM/evidence adapter workflow for candidate primitives and explicit VP1 evidence from selectors, DOM boxes, hit tests, computed styles, accessibility snapshots, or text sources.
+  - `skills/visual-fix-loop/SKILL.md` — orchestration workflow for reproduce/capture/primitives/proof/fix/recapture/proof loops while delegating the final verdict to `visual-proof`.
 - Dependency-free core: `src/visual-proof-core.mjs`
 - CLI: `bin/visual-proof.mjs`
 
@@ -20,23 +23,25 @@ This package is split into composable skills. It does **not** capture screenshot
 
 Use the skills together when needed, but keep their responsibilities separate:
 
-1. `visual-primitives` grounds what is visible in a supplied screenshot as VP1 primitives. It can suggest predicates or a draft handoff, but it has no DOM authority and no final fixed verdict.
-2. `visual-proof` turns supplied observations into a before-only draft or complete before/after proof. It requires explicit evidence for visibility, text, and clickability, then evaluates the deterministic verdict.
+1. `browser-capture` obtains or normalizes screenshot/video metadata from a user, browser worker, Pi Autobrowse, Playwright, or test harness. It does not draw primitives, inspect DOM evidence, fix app code, or decide a VP1 verdict.
+2. `dom-bridge` converts supplied DOM, selector, hit-test, computed-style, accessibility, or text data into candidate VP1 primitives and explicit evidence fields. It does not hide visual proof decisions or claim the UI is fixed.
+3. `visual-primitives` grounds what is visible in a supplied screenshot as VP1 primitives. It can suggest predicates or a draft handoff, but it has no DOM authority and no final fixed verdict.
+4. `visual-proof` turns supplied observations into a before-only draft or complete before/after proof. It requires explicit evidence for visibility, text, and clickability, then evaluates the deterministic verdict.
+5. `visual-fix-loop` coordinates the overall fix workflow and calls the companion skills in sequence. It reports fixed only by citing the `visual-proof` output.
 
-Future adapters may add browser capture, DOM mapping, OCR/text evidence, hit-test evidence, or a visual fix loop. Those adapters should feed data into the skills instead of replacing the VP1 proof boundary.
-
-See `docs/visual-proof-process.md` for the phase map and current/future skill ownership.
+See `docs/visual-proof-process.md` for the phase map, handoff contracts, and non-goals.
 
 ## Phase map
 
 | Phase | Current package support |
 | --- | --- |
-| Observe/capture screenshot or video metadata | External user/test harness; future `browser-capture` adapter |
-| Ground boxes, points, and paths | `visual-primitives` |
+| Observe/capture screenshot or video metadata | `browser-capture`, using supplied or existing browser/test-harness outputs |
+| Ground boxes, points, and paths | `visual-primitives`; `dom-bridge` may provide selector-derived candidates |
+| Collect DOM/evidence fields | `dom-bridge`, for candidate primitives and `evidence.visibility`, `evidence.detectedText`, or `evidence.clickTargets` |
 | Define predicates and evidence needs | `visual-proof`; `visual-primitives` may suggest drafts |
 | Save before-only proof | `visual-proof` |
-| Fix app code | Outside this package; future `visual-fix-loop` orchestrator |
-| Capture after state and video metadata | External user/test harness; future `browser-capture` adapter |
+| Fix app code | Outside the proof package; `visual-fix-loop` may orchestrate the implementation workflow |
+| Capture after state and video metadata | `browser-capture` |
 | Evaluate and report VP1 verdict | `visual-proof` |
 
 ## Run the demo
@@ -74,27 +79,30 @@ All validation is pure Node.js and dependency-free.
 
 ## Workflow for agents
 
-1. Receive or capture screenshot metadata outside this proof package.
-2. Use `visual-primitives` when boxes, points, or paths need to be drawn from a screenshot.
-3. Use `visual-proof` to create a VP1 before-only draft with predicates and explicit evidence requirements.
-4. Fix the UI outside these skills if a broader task requires implementation work.
-5. Receive or capture after screenshot metadata and after video metadata.
-6. Reuse `visual-primitives` if after primitives need drawing.
-7. Use `visual-proof` to evaluate the complete proof and save the report next to the bug fix evidence.
+1. Use `browser-capture` or a supplied harness artifact to get before screenshot metadata.
+2. Use `dom-bridge` when selectors, DOM boxes, hit tests, computed styles, accessibility snapshots, or text evidence are available.
+3. Use `visual-primitives` when boxes, points, or paths need to be drawn or corrected from the screenshot.
+4. Use `visual-proof` to create a VP1 before-only draft with predicates and explicit evidence requirements.
+5. Fix the UI outside the verifier core; use `visual-fix-loop` if the task needs orchestration across reproduce, fix, recapture, and proof.
+6. Use `browser-capture` to collect after screenshot metadata and required after video metadata.
+7. Refresh DOM evidence and primitives with `dom-bridge` and `visual-primitives` when needed.
+8. Use `visual-proof` to evaluate the complete proof and save the report next to the bug fix evidence.
 
-See `skills/visual-proof/SKILL.md` and `skills/visual-primitives/SKILL.md` for full Pi skill instructions.
+See the five `skills/*/SKILL.md` files for full Pi skill instructions.
 
 ## Schema
 
 See `docs/visual-proof-object.md`.
 
-## Limitations
+## Remaining non-goals
 
 - The verifier only checks supplied primitives and evidence.
-- It does not inspect image pixels, inspect DOM, or verify that screenshot/video files exist.
+- It does not inspect image pixels, inspect live DOM, or verify that screenshot/video files exist.
+- The adapter skills do not add runtime dependencies, browser drivers, Playwright installs, DOM libraries, OCR engines, VLM calls, pixel-diff engines, or site-specific browser behavior.
 - Evidence-backed predicates fail on missing evidence instead of guessing.
+- Final `fixed`, `passing`, `regressed`, or `still_failing` verdicts belong to `visual-proof` output only.
 - The included fixture is synthetic so local validation remains deterministic and dependency-free.
 
-## Adapter ideas
+## External tool adapters
 
-Future adapters can populate VP1 from Playwright screenshots/videos, DOM bounding boxes, browser hit tests, accessibility snapshots, OCR, or VLM grounding. Those adapters should remain optional and feed this deterministic verifier rather than replacing it.
+Existing browser workers, Pi Autobrowse sessions, Playwright suites, user/test harnesses, DOM snippets, OCR systems, or VLM tools can feed data into these skills. Keep those tools optional and reviewable; they should populate VP1 metadata, primitives, and evidence rather than replacing deterministic `visual-proof` evaluation.

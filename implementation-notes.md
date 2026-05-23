@@ -39,13 +39,12 @@ Demo verdict details:
 - Before failed predicates: `button_not_over_footer`, `button_inside_main_content`, `button_center_inside_main_content`, `submit_button_clickable`.
 - After failed predicates: none.
 
-## Next adapter ideas
+## Next tool adapter ideas
 
-- Playwright adapter to capture screenshots/videos and populate screenshot/video metadata.
-- DOM bounding-box adapter to ground initial `box` and `point` primitives from selectors.
-- Browser hit-test adapter to populate `evidence.clickTargets`.
-- Accessibility/text/OCR adapter to populate `evidence.detectedText`.
-- Optional VLM grounding adapter for ambiguous visual primitives, with human-reviewable coordinates before deterministic VP1 evaluation.
+- Capture backends for `browser-capture`, such as Playwright suites or browser-worker harnesses that produce screenshot/video metadata without becoming part of the verifier core.
+- DOM bounding-box and hit-test helpers for `dom-bridge` that populate candidate `box`/`point` primitives and `evidence.clickTargets` from explicit browser/test-harness facts.
+- Accessibility/text/OCR helpers that can populate `evidence.detectedText` while keeping OCR output reviewable evidence rather than a proof verdict.
+- Optional VLM grounding helpers for ambiguous visual primitives, with human-reviewable coordinates before deterministic VP1 evaluation.
 
 ## Review closeout follow-up 2
 
@@ -67,8 +66,8 @@ Decisions:
 
 - Kept `visual-proof` as the proof-only VP1 skill. It now explicitly consumes supplied screenshot/video metadata, primitives, predicates, and evidence, and states that it does not capture screenshots, drive browsers, inspect DOM, run OCR/VLM tooling, generate primitives from pixels, or fix app code.
 - Added `visual-primitives` as the drawing/pointing skill. It produces VP1-compatible `box`, `point`, and `path` primitives from supplied screenshots, may suggest predicates or a draft handoff, and does not own DOM mapping, browser capture, OCR/VLM tooling, code fixing, complete proof evaluation, or a final fixed verdict.
-- Added `docs/visual-proof-process.md` to describe the phase map and to keep current skills separate from future `browser-capture`, `dom-bridge`, and `visual-fix-loop` adapters/orchestrators.
-- Updated `package.json` to expose both skills and updated `scripts/check-package.mjs` to validate the manifest, process doc, README references, and key boundary language for both skills while keeping validation dependency-free.
+- Added `docs/visual-proof-process.md` to describe the phase map and to keep proof, primitive drawing, capture, DOM/evidence, and fix-loop responsibilities separate.
+- Updated `package.json` to expose both initial skills and updated `scripts/check-package.mjs` to validate the manifest, process doc, README references, and key boundary language for both skills while keeping validation dependency-free.
 
 Validation evidence for this split:
 
@@ -77,3 +76,21 @@ Validation evidence for this split:
 - `node test/extension-smoke.test.mjs` — exit 0.
 - `node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-skill-split-demo` — exit 0. Verdict `fixed`; generated `evaluation.json`, `report.md`, `before-overlay.svg`, and `after-overlay.svg`.
 - `git diff --check` — exit 0.
+
+## Adapter skills implementation — 2026-05-23
+
+Decisions:
+
+- Implemented `browser-capture`, `dom-bridge`, and `visual-fix-loop` as dependency-free Pi skill documents and manifest entries rather than browser/DOM runtime libraries. They define workflows, inputs, outputs, handoffs, and refusal boundaries over supplied artifacts or existing task tools.
+- Kept `browser-capture` limited to screenshot/video capture metadata. It can reference available tools such as browser workers, Pi Autobrowse, Playwright, or user/test harnesses, but it does not draw primitives, inspect DOM evidence, fix code, or own VP1 verdicts.
+- Kept `dom-bridge` limited to explicit DOM/evidence adaptation. It can produce candidate primitives plus `evidence.visibility`, `evidence.detectedText`, and `evidence.clickTargets`, but evidence remains separate from the final proof decision.
+- Kept `visual-fix-loop` as an orchestrator for reproduce/capture/primitives/proof-draft/fix/recapture/proof sequencing. Project-specific code edits remain outside the verifier core, and final fixed claims must cite `visual-proof` output.
+- Updated README, process docs, `visual-proof`, and `visual-primitives` to delegate to the implemented companion skills while preserving narrow proof-only and drawing/pointing-only boundaries.
+- Extended the dependency-free package checker to validate all five skill manifest entries, skill boundary language, companion-skill delegation, and stale wording around the three adapter skill ids.
+
+Validation evidence for this adapter-skill slice:
+
+- `npm run check` — exit 0. Validated all five skill manifest entries, skill boundary wording, README/process docs, fixture metadata, core tests, extension smoke, and the CLI demo under `.visual-proof-test-output/check-package`.
+- `node test/core.test.mjs` — exit 0.
+- `node test/extension-smoke.test.mjs` — exit 0.
+- `node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-adapter-skills-demo` — exit 0. Verdict `fixed`; generated `evaluation.json`, `report.md`, `before-overlay.svg`, and `after-overlay.svg` in `/tmp/visual-proof-adapter-skills-demo`.

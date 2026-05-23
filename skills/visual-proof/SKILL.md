@@ -1,13 +1,13 @@
 ---
 name: visual-proof
-description: Proof-only workflow for creating and evaluating Visual Proof Objects (VP1) from supplied screenshot/video metadata, grounded primitives, and explicit evidence.
+description: Proof-only workflow for creating and evaluating Visual Proof Objects (VP1) from supplied screenshot/video metadata, grounded primitives, predicates, and explicit evidence.
 ---
 
 # Visual Proof Skill
 
-Use this skill when you need a deterministic proof artifact for a UI visual bug or feature acceptance claim. It consumes supplied screenshot/video metadata, VP1-compatible primitives, and explicit evidence, then creates or evaluates Visual Proof Objects.
+Use this skill when you need a deterministic proof artifact for a UI visual bug or feature acceptance claim. It consumes supplied screenshot/video metadata, VP1-compatible primitives, predicates, and explicit evidence, then creates or evaluates Visual Proof Objects.
 
-This is the proof layer only. If a broader task also involves capturing a browser state, drawing primitives, inspecting the DOM, or fixing app code, perform those steps with another skill, adapter, or ordinary implementation workflow before returning to this proof skill.
+This is the proof layer only. If a broader task also involves capturing a browser state, adapting DOM evidence, drawing primitives, or fixing app code, delegate those steps to the companion skills or ordinary implementation workflow before returning to this proof skill.
 
 ## Owns
 
@@ -21,7 +21,7 @@ This is the proof layer only. If a broader task also involves capturing a browse
 
 This skill does not capture screenshots, drive a browser, inspect DOM, run OCR, call VLMs, generate visual primitives from pixels, or fix application code. It never gives a final `fixed` verdict without a complete before/after VP1 proof.
 
-When a screenshot needs manual visual grounding, use the `visual-primitives` skill to draw boxes, points, and paths first. Future adapters such as `browser-capture`, `dom-bridge`, or `visual-fix-loop` may produce inputs for this skill, but they are not implemented here.
+When a screenshot needs manual visual grounding, use the `visual-primitives` skill to draw boxes, points, and paths first. Use the `browser-capture` skill for screenshot/video capture and metadata collection. Use the `dom-bridge` skill for selector, hit-test, computed-style, accessibility, or text evidence. Use the `visual-fix-loop` skill when the task needs an end-to-end reproduce/fix/recapture/proof loop.
 
 ## Required inputs
 
@@ -45,14 +45,15 @@ Geometry predicates can be checked from primitives. Evidence-backed predicates c
 
 - `visible` requires `observation.evidence.visibility[subject].visible === true`.
 - `text_present` requires explicit `observation.evidence.detectedText` evidence.
-- `clickable` requires explicit `observation.evidence.clickTargets[subject].clickable === true`.
+- `clickable` requires `observation.evidence.clickTargets[subject].clickable === true`.
 
 Do not infer these from the screenshot path alone. Missing evidence should fail predicates instead of being treated as success.
 
 ## Workflow
 
 1. **Receive the observation package**
-   - Confirm that screenshots/video metadata came from the user, another skill, or an adapter.
+   - Confirm that screenshots/video metadata came from the user, `browser-capture`, or another explicit capture source.
+   - Confirm that DOM, hit-test, accessibility, or text evidence came from `dom-bridge` or another explicit evidence adapter when evidence-backed predicates are requested.
    - Confirm that primitives are already grounded. If not, pause proof work and hand the screenshot to `visual-primitives`.
 
 2. **Create the VP1 object**
@@ -69,11 +70,29 @@ Do not infer these from the screenshot path alone. Missing evidence should fail 
 4. **Complete after external change/capture**
    - The UI fix, browser recapture, DOM mapping, OCR, or hit-test work happens outside this skill.
    - Add after screenshot metadata, after video metadata, after primitives, and explicit after evidence when those outputs are supplied.
+   - If the task is being coordinated by `visual-fix-loop`, treat that skill as the orchestrator and keep this skill focused on the VP1 artifact.
 
 5. **Evaluate and report**
    - Run `visual_proof_evaluate` or `node bin/visual-proof.mjs evaluate <proof.json> --out <dir>` only after the proof has complete before and after observations.
    - The strongest bug-fix verdict is `fixed`: before predicates fail and after predicates pass.
    - Attach or reference `evaluation.json`, `report.md`, and overlay SVGs in the final handoff.
+
+## Handoff contract
+
+Return either a before-only draft, a complete proof evaluation, or a blocked/missing-data report:
+
+```json
+{
+  "to": "visual-proof",
+  "status": "draft|evaluated|blocked",
+  "proofPath": "visual-proof.json",
+  "verdict": "draft|fixed|passing|regressed|still_failing",
+  "artifacts": ["evaluation.json", "report.md", "before-overlay.svg", "after-overlay.svg"],
+  "missing": ["after.video.frameCount", "evidence.clickTargets.submit_button"]
+}
+```
+
+Only include a final verdict when `visual-proof` has evaluated a complete before/after VP1 proof.
 
 ## When to ask for more data
 

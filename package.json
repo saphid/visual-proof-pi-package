@@ -9,7 +9,10 @@
     "pi-package",
     "visual-proof",
     "ui-testing",
-    "visual-primitives"
+    "visual-primitives",
+    "browser-capture",
+    "dom-bridge",
+    "visual-fix-loop"
   ],
   "bin": {
     "visual-proof": "bin/visual-proof.mjs"
@@ -40,6 +43,24 @@
         "name": "Visual Primitives",
         "path": "skills/visual-primitives/SKILL.md",
         "description": "Drawing and pointing workflow for producing VP1-compatible boxes, points, and paths from supplied screenshots."
+      },
+      {
+        "id": "browser-capture",
+        "name": "Browser Capture",
+        "path": "skills/browser-capture/SKILL.md",
+        "description": "Capture and metadata workflow for producing VP1-ready screenshot, route or URL, viewport, and after-video metadata from supplied or existing browser-tool outputs."
+      },
+      {
+        "id": "dom-bridge",
+        "name": "DOM Bridge",
+        "path": "skills/dom-bridge/SKILL.md",
+        "description": "DOM and evidence adapter workflow for turning selectors, DOM boxes, hit tests, computed styles, accessibility snapshots, and text sources into candidate VP1 primitives and explicit evidence."
+      },
+      {
+        "id": "visual-fix-loop",
+        "name": "Visual Fix Loop",
+        "path": "skills/visual-fix-loop/SKILL.md",
+        "description": "Orchestration workflow for reproduce, capture, primitives, proof draft, fix, recapture, and final proof loops that delegates VP1 verdicts to visual-proof."
       }
     ]
   }
