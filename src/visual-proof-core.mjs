@@ -965,11 +965,19 @@ function toPosixPath(value) {
   return value.split(path.sep).join('/');
 }
 
+function overlayAssetBaseDir(proof) {
+  const proofSourceDir = proof[PROOF_SOURCE_DIR] || process.cwd();
+  if (!proof.assetBaseDir) return proofSourceDir;
+  return path.isAbsolute(proof.assetBaseDir)
+    ? proof.assetBaseDir
+    : path.resolve(proofSourceDir, proof.assetBaseDir);
+}
+
 function overlayScreenshotHref(proof, observation, outDir) {
   const screenshotPath = observation.screenshot.path;
   if (isUrlLike(screenshotPath)) return screenshotPath;
   if (!outDir) return screenshotPath;
-  const sourceDir = proof.assetBaseDir || proof[PROOF_SOURCE_DIR] || process.cwd();
+  const sourceDir = overlayAssetBaseDir(proof);
   const absoluteScreenshotPath = path.isAbsolute(screenshotPath)
     ? screenshotPath
     : path.resolve(sourceDir, screenshotPath);

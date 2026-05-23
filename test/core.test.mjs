@@ -193,4 +193,12 @@ test('overlay href generation honors explicit assetBaseDir over proof file locat
   const { paths } = writeEvaluationArtifacts(proof, outDir);
   const beforeOverlay = readFileSync(paths.overlays.before, 'utf8');
   assert.match(beforeOverlay, /<image href="\.\.\/\.\.\/external-assets\/artifacts\/before\/button-overlap-before\.png"/);
+
+  const relativeProof = loadProofFromFile(fixturePath);
+  relativeProof.assetBaseDir = '../external-assets';
+  const relativeOutDir = path.join(testOutputRoot, `relative-asset-base-${process.pid}`);
+  rmSync(relativeOutDir, { recursive: true, force: true });
+  const relativeResult = writeEvaluationArtifacts(relativeProof, relativeOutDir);
+  const relativeOverlay = readFileSync(relativeResult.paths.overlays.before, 'utf8');
+  assert.match(relativeOverlay, /<image href="\.\.\/\.\.\/external-assets\/artifacts\/before\/button-overlap-before\.png"/);
 });
