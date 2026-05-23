@@ -1,0 +1,40 @@
+{
+  "name": "visual-proof-pi-package",
+  "version": "0.1.0",
+  "description": "Dependency-free Pi package for Visual Proof Objects and deterministic UI visual predicate verification.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "keywords": [
+    "pi-package",
+    "visual-proof",
+    "ui-testing",
+    "visual-primitives"
+  ],
+  "bin": {
+    "visual-proof": "bin/visual-proof.mjs"
+  },
+  "scripts": {
+    "check": "node scripts/check-package.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "pi": {
+    "extensions": [
+      {
+        "id": "visual-proof",
+        "name": "Visual Proof",
+        "path": "extensions/visual-proof/index.ts",
+        "description": "Registers tools for creating, evaluating, and reporting Visual Proof Objects."
+      }
+    ],
+    "skills": [
+      {
+        "id": "visual-proof",
+        "name": "Visual Proof",
+        "path": "skills/visual-proof/SKILL.md",
+        "description": "Workflow for proving UI visual bugs and feature acceptance with grounded visual primitives."
+      }
+    ]
+  }
+}

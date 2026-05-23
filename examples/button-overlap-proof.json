@@ -1,0 +1,278 @@
+{
+  "schemaVersion": "vp1",
+  "id": "button-overlap-proof",
+  "title": "Submit button no longer overlaps the footer",
+  "description": "Synthetic UI proof showing a primary submit button that was partially covered by a sticky footer before the fix and is fully inside the main content area after the fix.",
+  "coordinateSpace": "pixel",
+  "observations": {
+    "before": {
+      "screenshot": {
+        "path": "artifacts/before/button-overlap-before.png",
+        "width": 1024,
+        "height": 640,
+        "viewport": {
+          "width": 1024,
+          "height": 640,
+          "deviceScaleFactor": 1
+        },
+        "url": "http://localhost:5173/checkout",
+        "route": "/checkout"
+      },
+      "primitives": [
+        {
+          "id": "main_content",
+          "type": "box",
+          "label": "Main content region",
+          "role": "container",
+          "x": 64,
+          "y": 96,
+          "width": 896,
+          "height": 464
+        },
+        {
+          "id": "footer",
+          "type": "box",
+          "label": "Sticky footer",
+          "role": "bug",
+          "x": 0,
+          "y": 560,
+          "width": 1024,
+          "height": 80
+        },
+        {
+          "id": "submit_button",
+          "type": "box",
+          "label": "Submit button",
+          "role": "target",
+          "x": 800,
+          "y": 535,
+          "width": 160,
+          "height": 56
+        },
+        {
+          "id": "submit_center",
+          "type": "point",
+          "label": "Submit button center",
+          "x": 880,
+          "y": 563
+        },
+        {
+          "id": "keyboard_focus_path",
+          "type": "path",
+          "label": "Keyboard focus path to submit",
+          "points": [
+            { "x": 690, "y": 420 },
+            { "x": 748, "y": 455 },
+            { "x": 804, "y": 498 },
+            { "x": 880, "y": 563 }
+          ]
+        }
+      ],
+      "evidence": {
+        "visibility": {
+          "submit_button": {
+            "visible": true,
+            "source": "synthetic screenshot annotation",
+            "note": "Button text and outline are present, but the lower portion is covered by the footer."
+          }
+        },
+        "detectedText": [
+          {
+            "text": "Submit order",
+            "primitiveId": "submit_button",
+            "source": "synthetic OCR annotation"
+          },
+          {
+            "text": "Need help? Contact support",
+            "primitiveId": "footer",
+            "source": "synthetic OCR annotation"
+          }
+        ],
+        "clickTargets": {
+          "submit_button": {
+            "clickable": false,
+            "source": "synthetic hit-test annotation",
+            "reason": "Sticky footer intercepts the button center and lower edge."
+          }
+        }
+      }
+    },
+    "after": {
+      "screenshot": {
+        "path": "artifacts/after/button-overlap-after.png",
+        "width": 1024,
+        "height": 640,
+        "viewport": {
+          "width": 1024,
+          "height": 640,
+          "deviceScaleFactor": 1
+        },
+        "url": "http://localhost:5173/checkout",
+        "route": "/checkout"
+      },
+      "video": {
+        "path": "artifacts/after/button-overlap-after.webm",
+        "durationMs": 4200,
+        "frameCount": 126,
+        "sampledFrames": [
+          {
+            "timeMs": 0,
+            "path": "artifacts/after/video-frame-0000.png",
+            "note": "Checkout page loaded."
+          },
+          {
+            "timeMs": 2100,
+            "path": "artifacts/after/video-frame-2100.png",
+            "note": "Focus reaches the submit button without footer interception."
+          },
+          {
+            "timeMs": 4200,
+            "path": "artifacts/after/video-frame-4200.png",
+            "note": "Submit click target remains visible and unobstructed."
+          }
+        ]
+      },
+      "primitives": [
+        {
+          "id": "main_content",
+          "type": "box",
+          "label": "Main content region",
+          "role": "container",
+          "x": 64,
+          "y": 96,
+          "width": 896,
+          "height": 464
+        },
+        {
+          "id": "footer",
+          "type": "box",
+          "label": "Sticky footer",
+          "role": "bug",
+          "x": 0,
+          "y": 560,
+          "width": 1024,
+          "height": 80
+        },
+        {
+          "id": "submit_button",
+          "type": "box",
+          "label": "Submit button",
+          "role": "target",
+          "x": 432,
+          "y": 432,
+          "width": 160,
+          "height": 56
+        },
+        {
+          "id": "submit_center",
+          "type": "point",
+          "label": "Submit button center",
+          "x": 512,
+          "y": 460
+        },
+        {
+          "id": "keyboard_focus_path",
+          "type": "path",
+          "label": "Keyboard focus path to submit",
+          "points": [
+            { "x": 392, "y": 360 },
+            { "x": 430, "y": 394 },
+            { "x": 475, "y": 430 },
+            { "x": 512, "y": 460 }
+          ]
+        }
+      ],
+      "evidence": {
+        "visibility": {
+          "submit_button": {
+            "visible": true,
+            "source": "synthetic screenshot annotation",
+            "note": "Button is fully visible above the footer."
+          }
+        },
+        "detectedText": [
+          {
+            "text": "Submit order",
+            "primitiveId": "submit_button",
+            "source": "synthetic OCR annotation"
+          },
+          {
+            "text": "Need help? Contact support",
+            "primitiveId": "footer",
+            "source": "synthetic OCR annotation"
+          }
+        ],
+        "clickTargets": {
+          "submit_button": {
+            "clickable": true,
+            "point": { "x": 512, "y": 460 },
+            "source": "synthetic hit-test annotation",
+            "reason": "Button center is unobstructed after layout spacing fix."
+          }
+        }
+      }
+    }
+  },
+  "predicates": [
+    {
+      "id": "button_not_over_footer",
+      "type": "not_overlapping",
+      "description": "Submit button must not overlap the sticky footer.",
+      "primitives": ["submit_button", "footer"],
+      "maxOverlapRatio": 0,
+      "ratioBasis": "min_area"
+    },
+    {
+      "id": "button_inside_main_content",
+      "type": "inside",
+      "description": "Submit button must be fully contained by the main content area.",
+      "subject": "submit_button",
+      "container": "main_content",
+      "tolerancePx": 0
+    },
+    {
+      "id": "button_center_inside_main_content",
+      "type": "inside",
+      "description": "The submit button center point remains in the main content region.",
+      "subject": "submit_center",
+      "container": "main_content",
+      "tolerancePx": 0
+    },
+    {
+      "id": "submit_button_visible",
+      "type": "visible",
+      "description": "Visibility is backed by explicit screenshot annotation evidence.",
+      "subject": "submit_button"
+    },
+    {
+      "id": "submit_text_present",
+      "type": "text_present",
+      "description": "The expected submit label is backed by explicit OCR/text evidence.",
+      "text": "Submit order",
+      "match": "includes"
+    },
+    {
+      "id": "submit_button_clickable",
+      "type": "clickable",
+      "description": "Clickability is backed by explicit hit-test evidence.",
+      "subject": "submit_button"
+    },
+    {
+      "id": "exactly_one_submit_button",
+      "type": "count_equals",
+      "description": "Only one submit button primitive should be present.",
+      "selector": {
+        "type": "box",
+        "label": "Submit button"
+      },
+      "expected": 1
+    },
+    {
+      "id": "focus_path_continuous",
+      "type": "path_continuous",
+      "description": "Keyboard/focus path points should form a continuous route to the button.",
+      "subject": "keyboard_focus_path",
+      "maxGapPx": 105
+    }
+  ]
+}
