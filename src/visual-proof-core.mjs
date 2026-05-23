@@ -969,7 +969,7 @@ function overlayScreenshotHref(proof, observation, outDir) {
   const screenshotPath = observation.screenshot.path;
   if (isUrlLike(screenshotPath)) return screenshotPath;
   if (!outDir) return screenshotPath;
-  const sourceDir = proof[PROOF_SOURCE_DIR] || proof.assetBaseDir || process.cwd();
+  const sourceDir = proof.assetBaseDir || proof[PROOF_SOURCE_DIR] || process.cwd();
   const absoluteScreenshotPath = path.isAbsolute(screenshotPath)
     ? screenshotPath
     : path.resolve(sourceDir, screenshotPath);

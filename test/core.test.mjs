@@ -184,3 +184,13 @@ test('report generation writes machine and human readable artifacts', () => {
   assert.match(beforeOverlay, /<image href="\.\.\/\.\.\/examples\/artifacts\/before\/button-overlap-before\.png"/);
   assert.match(generateMarkdownReport(fixture), /Boundary/);
 });
+
+test('overlay href generation honors explicit assetBaseDir over proof file location', () => {
+  const proof = clone(fixture);
+  proof.assetBaseDir = path.join(repoRoot, 'external-assets');
+  const outDir = path.join(testOutputRoot, `asset-base-${process.pid}`);
+  rmSync(outDir, { recursive: true, force: true });
+  const { paths } = writeEvaluationArtifacts(proof, outDir);
+  const beforeOverlay = readFileSync(paths.overlays.before, 'utf8');
+  assert.match(beforeOverlay, /<image href="\.\.\/\.\.\/external-assets\/artifacts\/before\/button-overlap-before\.png"/);
+});

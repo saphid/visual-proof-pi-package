@@ -58,3 +58,4 @@ I also moved local test/check generated artifacts from `/tmp` into ignored `.vis
 ## Merge closeout follow-up
 
 Codex Review on the integrated commit found that overlay SVG screenshot `<image>` hrefs would break when the proof used relative screenshot paths and reports were written to a different output directory. `loadProofFromFile` now remembers the proof JSON directory, and `writeEvaluationArtifacts` rewrites relative screenshot hrefs relative to the overlay output directory. This keeps overlays connected to screenshots for normal `--out /tmp/...` CLI/tool usage.
+- Follow-up: if a proof explicitly sets `assetBaseDir`, overlay href rewriting now uses that before the proof JSON directory, so users can keep screenshots/videos outside the proof file folder.
