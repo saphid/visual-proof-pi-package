@@ -8,13 +8,22 @@ import { evaluateProof, loadProofFromFile } from '../src/visual-proof-core.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 
+const requiredSkills = new Map([
+  ['visual-proof', 'skills/visual-proof/SKILL.md'],
+  ['visual-primitives', 'skills/visual-primitives/SKILL.md']
+]);
+
 function fail(message) {
   console.error(`check-package: ${message}`);
   process.exit(1);
 }
 
+function readText(relativePath) {
+  return readFileSync(path.join(repoRoot, relativePath), 'utf8');
+}
+
 function readJson(relativePath) {
-  return JSON.parse(readFileSync(path.join(repoRoot, relativePath), 'utf8'));
+  return JSON.parse(readText(relativePath));
 }
 
 function requireFile(relativePath) {
@@ -25,6 +34,10 @@ function assert(condition, message) {
   if (!condition) fail(message);
 }
 
+function assertIncludes(text, needle, message) {
+  assert(text.includes(needle), message);
+}
+
 function validateManifest() {
   const manifest = readJson('package.json');
   assert(manifest.type === 'module', 'package.json must use type=module');
@@ -33,27 +46,99 @@ function validateManifest() {
   assert(manifest.devDependencies && Object.keys(manifest.devDependencies).length === 0, 'devDependencies must be empty for dependency-free local validation');
   assert(manifest.scripts?.check === 'node scripts/check-package.mjs', 'npm run check must use the pure Node package checker');
   assert(Array.isArray(manifest.pi?.extensions) && manifest.pi.extensions.length === 1, 'pi manifest must expose exactly one extension');
-  assert(Array.isArray(manifest.pi?.skills) && manifest.pi.skills.length === 1, 'pi manifest must expose exactly one skill');
+  assert(Array.isArray(manifest.pi?.skills) && manifest.pi.skills.length >= requiredSkills.size, 'pi manifest must expose visual-proof and visual-primitives skills');
+
+  const skillIds = new Set();
+  for (const skill of manifest.pi.skills) {
+    assert(typeof skill.id === 'string' && skill.id.length > 0, 'each skill must have an id');
+    assert(!skillIds.has(skill.id), `duplicate skill id ${skill.id}`);
+    skillIds.add(skill.id);
+    assert(typeof skill.path === 'string' && skill.path.length > 0, `skill ${skill.id} must have a path`);
+    requireFile(skill.path);
+  }
+
+  for (const [skillId, expectedPath] of requiredSkills) {
+    const skill = manifest.pi.skills.find((entry) => entry.id === skillId);
+    assert(skill, `pi manifest must expose ${skillId} skill`);
+    assert(skill.path === expectedPath, `${skillId} skill path must be ${expectedPath}`);
+    assert(typeof skill.description === 'string' && skill.description.length > 20, `${skillId} skill must have a useful description`);
+  }
+
   requireFile(manifest.pi.extensions[0].path);
-  requireFile(manifest.pi.skills[0].path);
   requireFile('bin/visual-proof.mjs');
   requireFile('src/visual-proof-core.mjs');
   requireFile('src/visual-proof-tools.mjs');
   requireFile('docs/visual-proof-object.md');
+  requireFile('docs/visual-proof-process.md');
   requireFile('examples/button-overlap-proof.json');
 }
 
-function validateSkill() {
-  const skill = readFileSync(path.join(repoRoot, 'skills/visual-proof/SKILL.md'), 'utf8');
-  assert(skill.startsWith('---\n'), 'skill must have YAML frontmatter');
-  assert(/name:\s*visual-proof/.test(skill), 'skill frontmatter must name visual-proof');
-  assert(/description:\s*.+Visual Proof Objects/.test(skill), 'skill frontmatter must describe Visual Proof Objects');
-  assert(skill.includes('Do not infer these from the screenshot path alone.'), 'skill must be honest about evidence-backed predicates');
-  assert(skill.includes('Browser capture, Playwright automation, DOM box extraction, OCR, and VLM grounding are adapters.'), 'skill must document adapter boundary');
+function validateVisualProofSkill() {
+  const skill = readText('skills/visual-proof/SKILL.md');
+  assert(skill.startsWith('---\n'), 'visual-proof skill must have YAML frontmatter');
+  assert(/name:\s*visual-proof/.test(skill), 'visual-proof frontmatter must name visual-proof');
+  assert(/description:\s*.+Visual Proof Objects/.test(skill), 'visual-proof frontmatter must describe Visual Proof Objects');
+  assertIncludes(skill, 'This is the proof layer only.', 'visual-proof must be explicitly proof-only');
+  assertIncludes(skill, 'This skill does not capture screenshots, drive a browser, inspect DOM, run OCR, call VLMs, generate visual primitives from pixels, or fix application code.', 'visual-proof must exclude capture/DOM/OCR/VLM/primitive/code-fix ownership');
+  assertIncludes(skill, 'When a screenshot needs manual visual grounding, use the `visual-primitives` skill', 'visual-proof must delegate drawing/pointing to visual-primitives');
+  assertIncludes(skill, 'at least one of `route` or `url`', 'visual-proof draft instructions must match required screenshot route/url metadata');
+  assert(!skill.includes('`route` or `url` when known'), 'visual-proof must not imply route/url is optional for validated draft screenshots');
+  assertIncludes(skill, 'It never gives a final `fixed` verdict without a complete before/after VP1 proof.', 'visual-proof must not claim a final verdict without complete proof data');
+  assertIncludes(skill, 'Do not infer these from the screenshot path alone.', 'visual-proof must be honest about evidence-backed predicates');
+}
+
+function validateVisualPrimitivesSkill() {
+  const skill = readText('skills/visual-primitives/SKILL.md');
+  assert(skill.startsWith('---\n'), 'visual-primitives skill must have YAML frontmatter');
+  assert(/name:\s*visual-primitives/.test(skill), 'visual-primitives frontmatter must name visual-primitives');
+  assert(/description:\s*.+boxes, points, and paths/.test(skill), 'visual-primitives frontmatter must describe boxes, points, and paths');
+  assertIncludes(skill, 'This is the drawing/pointing layer only.', 'visual-primitives must be explicitly drawing/pointing-only');
+  assertIncludes(skill, 'This skill does not capture screenshots, drive a browser, inspect DOM, map selectors, run OCR, call VLMs, fix application code, evaluate complete proofs, or declare a final fixed verdict.', 'visual-primitives must exclude browser/DOM/OCR/VLM/fixing/evaluation/final-verdict ownership');
+  assertIncludes(skill, '`box`, `point`, and `path` primitives', 'visual-primitives must output VP1 primitive types');
+  assertIncludes(skill, '"id": "footer"', 'visual-primitives example must define footer before suggesting predicates against it');
+  assertIncludes(skill, '"id": "main_content"', 'visual-primitives example must define main_content before suggesting predicates against it');
+  assertIncludes(skill, '"predicateSuggestions"', 'visual-primitives may provide predicate suggestions for handoff');
+  assertIncludes(skill, '"primitives": ["submit_button", "footer"]', 'visual-primitives predicate suggestions must use VP1-compatible primitive arrays');
+  assertIncludes(skill, '"to": "visual-proof"', 'visual-primitives must document draft handoff to visual-proof');
+  assertIncludes(skill, 'Evidence-backed claims such as visible text or clickability are left for explicit evidence adapters or for the `visual-proof` skill to require.', 'visual-primitives must not replace evidence-backed proof');
+}
+
+function validateProcessDocs() {
+  const processDoc = readText('docs/visual-proof-process.md');
+  for (const phrase of [
+    'Observe or capture state',
+    'Ground visual primitives',
+    'Define predicates and evidence needs',
+    'Save before proof',
+    'Fix the app',
+    'Capture after state',
+    'Verify and report'
+  ]) {
+    assertIncludes(processDoc, phrase, `process doc must include phase: ${phrase}`);
+  }
+  for (const skillId of requiredSkills.keys()) {
+    assertIncludes(processDoc, `\`${skillId}\``, `process doc must mention ${skillId}`);
+  }
+  for (const futureSkill of ['browser-capture', 'dom-bridge', 'visual-fix-loop']) {
+    assertIncludes(processDoc, `\`${futureSkill}\``, `process doc must document future ${futureSkill} boundary`);
+  }
+  assertIncludes(processDoc, 'They are intentionally not implemented here.', 'process doc must state future adapters are not implemented');
+
+  const readme = readText('README.md');
+  assertIncludes(readme, '## Composable skill split', 'README must explain the composable skill split');
+  assertIncludes(readme, 'skills/visual-proof/SKILL.md', 'README must list visual-proof skill');
+  assertIncludes(readme, 'skills/visual-primitives/SKILL.md', 'README must list visual-primitives skill');
+  assertIncludes(readme, 'docs/visual-proof-process.md', 'README must link to the process doc');
+}
+
+function validateSkills() {
+  validateVisualProofSkill();
+  validateVisualPrimitivesSkill();
+  validateProcessDocs();
 }
 
 function validateExtension() {
-  const extension = readFileSync(path.join(repoRoot, 'extensions/visual-proof/index.ts'), 'utf8');
+  const extension = readText('extensions/visual-proof/index.ts');
   assert(extension.includes("../../src/visual-proof-tools.mjs"), 'extension must import dependency-free tool registration helper');
   assert(extension.includes('registerVisualProofTools'), 'extension must register visual proof tools');
 }
@@ -90,7 +175,7 @@ function runNode(relativePath, args = []) {
 }
 
 validateManifest();
-validateSkill();
+validateSkills();
 validateExtension();
 validateExample();
 runNode('test/core.test.mjs');

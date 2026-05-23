@@ -60,3 +60,20 @@ I also moved local test/check generated artifacts from `/tmp` into ignored `.vis
 Codex Review on the integrated commit found that overlay SVG screenshot `<image>` hrefs would break when the proof used relative screenshot paths and reports were written to a different output directory. `loadProofFromFile` now remembers the proof JSON directory, and `writeEvaluationArtifacts` rewrites relative screenshot hrefs relative to the overlay output directory. This keeps overlays connected to screenshots for normal `--out /tmp/...` CLI/tool usage.
 - Follow-up: if a proof explicitly sets `assetBaseDir`, overlay href rewriting now uses that before the proof JSON directory, so users can keep screenshots/videos outside the proof file folder.
 - Follow-up: relative `assetBaseDir` values are now resolved against the proof JSON directory when the proof was loaded from disk, not against the process cwd.
+
+## Skill split implementation — 2026-05-23
+
+Decisions:
+
+- Kept `visual-proof` as the proof-only VP1 skill. It now explicitly consumes supplied screenshot/video metadata, primitives, predicates, and evidence, and states that it does not capture screenshots, drive browsers, inspect DOM, run OCR/VLM tooling, generate primitives from pixels, or fix app code.
+- Added `visual-primitives` as the drawing/pointing skill. It produces VP1-compatible `box`, `point`, and `path` primitives from supplied screenshots, may suggest predicates or a draft handoff, and does not own DOM mapping, browser capture, OCR/VLM tooling, code fixing, complete proof evaluation, or a final fixed verdict.
+- Added `docs/visual-proof-process.md` to describe the phase map and to keep current skills separate from future `browser-capture`, `dom-bridge`, and `visual-fix-loop` adapters/orchestrators.
+- Updated `package.json` to expose both skills and updated `scripts/check-package.mjs` to validate the manifest, process doc, README references, and key boundary language for both skills while keeping validation dependency-free.
+
+Validation evidence for this split:
+
+- `npm run check` — exit 0. Validated the two-skill manifest, skill boundary language, process doc/README references, fixture metadata, core tests, extension smoke, and CLI demo under `.visual-proof-test-output/check-package`.
+- `node test/core.test.mjs` — exit 0.
+- `node test/extension-smoke.test.mjs` — exit 0.
+- `node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-skill-split-demo` — exit 0. Verdict `fixed`; generated `evaluation.json`, `report.md`, `before-overlay.svg`, and `after-overlay.svg`.
+- `git diff --check` — exit 0.

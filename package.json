@@ -33,7 +33,13 @@
         "id": "visual-proof",
         "name": "Visual Proof",
         "path": "skills/visual-proof/SKILL.md",
-        "description": "Workflow for proving UI visual bugs and feature acceptance with grounded visual primitives."
+        "description": "Proof-only workflow for creating and evaluating Visual Proof Objects from supplied metadata, primitives, predicates, and evidence."
+      },
+      {
+        "id": "visual-primitives",
+        "name": "Visual Primitives",
+        "path": "skills/visual-primitives/SKILL.md",
+        "description": "Drawing and pointing workflow for producing VP1-compatible boxes, points, and paths from supplied screenshots."
       }
     ]
   }
