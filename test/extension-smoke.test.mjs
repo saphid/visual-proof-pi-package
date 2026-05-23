@@ -9,6 +9,7 @@ import { loadProofFromFile } from '../src/visual-proof-core.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const fixturePath = path.join(repoRoot, 'examples/button-overlap-proof.json');
+const testOutputRoot = path.join(repoRoot, '.visual-proof-test-output');
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -60,7 +61,7 @@ await test('extension helper registers expected dependency-free tools', () => {
 });
 
 await test('registered evaluate tool handler evaluates fixture and writes reports', async () => {
-  const outDir = path.join('/tmp', `visual-proof-extension-smoke-${process.pid}`);
+  const outDir = path.join(testOutputRoot, `extension-smoke-${process.pid}`);
   rmSync(outDir, { recursive: true, force: true });
   const result = await tool('visual_proof_evaluate').handler({ proofPath: fixturePath, outputDir: outDir }, { cwd: repoRoot });
   assert.equal(result.details.verdict, 'fixed');
@@ -73,7 +74,7 @@ await test('registered evaluate tool handler evaluates fixture and writes report
 });
 
 await test('registered create tool writes a validated proof artifact', async () => {
-  const outDir = path.join('/tmp', `visual-proof-extension-create-${process.pid}`);
+  const outDir = path.join(testOutputRoot, `extension-create-${process.pid}`);
   rmSync(outDir, { recursive: true, force: true });
   const proof = loadProofFromFile(fixturePath);
   const result = await tool('visual_proof_create').handler({ proof, outputDir: outDir }, { cwd: repoRoot });
@@ -82,7 +83,7 @@ await test('registered create tool writes a validated proof artifact', async () 
 });
 
 await test('registered create tool writes a before-only draft proof artifact', async () => {
-  const outDir = path.join('/tmp', `visual-proof-extension-draft-${process.pid}`);
+  const outDir = path.join(testOutputRoot, `extension-draft-${process.pid}`);
   rmSync(outDir, { recursive: true, force: true });
   const proof = clone(loadProofFromFile(fixturePath));
   delete proof.observations.after;
@@ -94,7 +95,7 @@ await test('registered create tool writes a before-only draft proof artifact', a
 });
 
 await test('tool default output dirs stay under .visual-proof for dot-like ids', async () => {
-  const cwd = path.join('/tmp', `visual-proof-extension-safe-slug-${process.pid}`);
+  const cwd = path.join(testOutputRoot, `extension-safe-slug-${process.pid}`);
   rmSync(cwd, { recursive: true, force: true });
   mkdirSync(cwd, { recursive: true });
   for (const id of ['.', '..', '...']) {
@@ -108,7 +109,7 @@ await test('tool default output dirs stay under .visual-proof for dot-like ids',
 });
 
 await test('CLI default output dir stays under .visual-proof for path-normalizing ids', async () => {
-  const cwd = path.join('/tmp', `visual-proof-cli-safe-slug-${process.pid}`);
+  const cwd = path.join(testOutputRoot, `cli-safe-slug-${process.pid}`);
   rmSync(cwd, { recursive: true, force: true });
   mkdirSync(cwd, { recursive: true });
   const proof = clone(loadProofFromFile(fixturePath));

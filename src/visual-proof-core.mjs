@@ -177,6 +177,11 @@ function validateVideo(video, at, options = {}) {
   }
   if (video.sampledFrames !== undefined) {
     const frames = assertArray(video.sampledFrames, `${at}.sampledFrames`);
+    if (frames.length === 0) {
+      throw new VisualProofError(`${at}.sampledFrames must include at least one frame when provided`, {
+        at: `${at}.sampledFrames`
+      });
+    }
     frames.forEach((frame, index) => {
       assertObject(frame, `${at}.sampledFrames[${index}]`);
       if (frame.timeMs !== undefined) assertFiniteNumber(frame.timeMs, `${at}.sampledFrames[${index}].timeMs`);
@@ -960,7 +965,8 @@ export function generateOverlaySvg(proof, phase) {
   const lines = [];
   lines.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Visual proof ${phase} overlay">`);
   lines.push(`  <title>${xmlEscape(proof.title || proof.id || 'Visual proof')} — ${phase}</title>`);
-  lines.push(`  <desc>Overlay for screenshot ${xmlEscape(observation.screenshot.path)}. The screenshot is referenced, not embedded.</desc>`);
+  lines.push(`  <desc>Overlay for screenshot ${xmlEscape(observation.screenshot.path)}. The screenshot is referenced with an SVG image element and primitives are drawn on top.</desc>`);
+  lines.push(`  <image href="${xmlEscape(observation.screenshot.path)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none"/>`);
   lines.push('  <rect x="0" y="0" width="100%" height="100%" fill="#ffffff" fill-opacity="0.02" stroke="#94a3b8" stroke-dasharray="8 8"/>');
 
   observation.primitives.forEach((primitive, index) => {

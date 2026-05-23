@@ -95,7 +95,7 @@ validateExtension();
 validateExample();
 runNode('test/core.test.mjs');
 runNode('test/extension-smoke.test.mjs');
-const checkOut = '/tmp/visual-proof-package-check';
+const checkOut = path.join(repoRoot, '.visual-proof-test-output', 'check-package');
 rmSync(checkOut, { recursive: true, force: true });
 runNode('bin/visual-proof.mjs', ['evaluate', 'examples/button-overlap-proof.json', '--out', checkOut]);
 console.log('check-package: ok');

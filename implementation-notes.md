@@ -46,3 +46,11 @@ Demo verdict details:
 - Browser hit-test adapter to populate `evidence.clickTargets`.
 - Accessibility/text/OCR adapter to populate `evidence.detectedText`.
 - Optional VLM grounding adapter for ambiguous visual primitives, with human-reviewable coordinates before deterministic VP1 evaluation.
+
+## Review closeout follow-up 2
+
+Codex Review accepted two additional P2 findings after the first blocker fix:
+- Complete after-video metadata now rejects `sampledFrames: []`; sampled-frame evidence must include at least one actual frame when used instead of `frameCount`.
+- Overlay SVGs now include an `<image href="...">` for the screenshot before drawing primitives, so the artifact is an actual overlay reference rather than boxes on a blank canvas.
+
+I also moved local test/check generated artifacts from `/tmp` into ignored `.visual-proof-test-output/` because Codex's sandbox could not create `/tmp/*` directories even though the normal parent environment could. The user-facing CLI demo still supports any explicit `--out` path, including `/tmp/...`.

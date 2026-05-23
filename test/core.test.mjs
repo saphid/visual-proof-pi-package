@@ -37,6 +37,7 @@ function test(name, fn) {
 }
 
 const fixture = loadProofFromFile(fixturePath);
+const testOutputRoot = path.join(repoRoot, '.visual-proof-test-output');
 
 test('geometry helpers compute area, overlap, containment, centers, and distance', () => {
   const a = { type: 'box', id: 'a', x: 0, y: 0, width: 100, height: 100 };
@@ -88,6 +89,11 @@ test('full proof validation requires after video frame metadata', () => {
   delete proof.observations.after.video.frameCount;
   delete proof.observations.after.video.sampledFrames;
   assert.throws(() => evaluateProof(proof), /observations\.after\.video must include frameCount or sampledFrames/);
+
+  const emptyFrames = clone(fixture);
+  delete emptyFrames.observations.after.video.frameCount;
+  emptyFrames.observations.after.video.sampledFrames = [];
+  assert.throws(() => evaluateProof(emptyFrames), /sampledFrames must include at least one frame/);
 });
 
 test('visible predicate fails when explicit visibility evidence is missing', () => {
@@ -163,7 +169,7 @@ test('malformed primitives and predicates raise actionable errors', () => {
 });
 
 test('report generation writes machine and human readable artifacts', () => {
-  const outDir = path.join('/tmp', `visual-proof-core-test-${process.pid}`);
+  const outDir = path.join(testOutputRoot, `core-${process.pid}`);
   rmSync(outDir, { recursive: true, force: true });
   const { evaluation, paths } = writeEvaluationArtifacts(fixture, outDir);
   assert.equal(evaluation.verdict, 'fixed');
@@ -172,7 +178,9 @@ test('report generation writes machine and human readable artifacts', () => {
   assert.ok(existsSync(paths.overlays.before));
   assert.ok(existsSync(paths.overlays.after));
   const report = readFileSync(paths.report, 'utf8');
+  const beforeOverlay = readFileSync(paths.overlays.before, 'utf8');
   assert.match(report, /Verdict:\*\* `fixed`/);
   assert.match(report, /Submit button must not overlap/);
+  assert.match(beforeOverlay, /<image href="artifacts\/before\/button-overlap-before\.png"/);
   assert.match(generateMarkdownReport(fixture), /Boundary/);
 });

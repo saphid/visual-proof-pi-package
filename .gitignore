@@ -1,0 +1,4 @@
+node_modules/
+.visual-proof/
+.visual-proof-test-output/
+npm-debug.log*
