@@ -54,3 +54,7 @@ Codex Review accepted two additional P2 findings after the first blocker fix:
 - Overlay SVGs now include an `<image href="...">` for the screenshot before drawing primitives, so the artifact is an actual overlay reference rather than boxes on a blank canvas.
 
 I also moved local test/check generated artifacts from `/tmp` into ignored `.visual-proof-test-output/` because Codex's sandbox could not create `/tmp/*` directories even though the normal parent environment could. The user-facing CLI demo still supports any explicit `--out` path, including `/tmp/...`.
+
+## Merge closeout follow-up
+
+Codex Review on the integrated commit found that overlay SVG screenshot `<image>` hrefs would break when the proof used relative screenshot paths and reports were written to a different output directory. `loadProofFromFile` now remembers the proof JSON directory, and `writeEvaluationArtifacts` rewrites relative screenshot hrefs relative to the overlay output directory. This keeps overlays connected to screenshots for normal `--out /tmp/...` CLI/tool usage.

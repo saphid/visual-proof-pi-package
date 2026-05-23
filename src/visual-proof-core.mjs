@@ -1,6 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+const PROOF_SOURCE_DIR = Symbol.for('visual-proof.sourceDir');
+
 export const VISUAL_PROOF_SCHEMA_VERSION = 'vp1';
 
 const EPSILON = 1e-9;
@@ -955,18 +957,39 @@ function primitiveColor(primitive, index) {
   return palette[index % palette.length];
 }
 
-export function generateOverlaySvg(proof, phase) {
+function isUrlLike(value) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(value);
+}
+
+function toPosixPath(value) {
+  return value.split(path.sep).join('/');
+}
+
+function overlayScreenshotHref(proof, observation, outDir) {
+  const screenshotPath = observation.screenshot.path;
+  if (isUrlLike(screenshotPath)) return screenshotPath;
+  if (!outDir) return screenshotPath;
+  const sourceDir = proof[PROOF_SOURCE_DIR] || proof.assetBaseDir || process.cwd();
+  const absoluteScreenshotPath = path.isAbsolute(screenshotPath)
+    ? screenshotPath
+    : path.resolve(sourceDir, screenshotPath);
+  const relative = toPosixPath(path.relative(outDir, absoluteScreenshotPath));
+  return relative.startsWith('.') ? relative : `./${relative}`;
+}
+
+export function generateOverlaySvg(proof, phase, options = {}) {
   validateProof(proof);
   if (phase !== 'before' && phase !== 'after') {
     throw new VisualProofError('phase must be before or after', { phase });
   }
   const observation = proof.observations[phase];
   const { width, height } = screenshotDimensions(observation, `observations.${phase}`);
+  const screenshotHref = overlayScreenshotHref(proof, observation, options.outDir);
   const lines = [];
   lines.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Visual proof ${phase} overlay">`);
   lines.push(`  <title>${xmlEscape(proof.title || proof.id || 'Visual proof')} — ${phase}</title>`);
   lines.push(`  <desc>Overlay for screenshot ${xmlEscape(observation.screenshot.path)}. The screenshot is referenced with an SVG image element and primitives are drawn on top.</desc>`);
-  lines.push(`  <image href="${xmlEscape(observation.screenshot.path)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none"/>`);
+  lines.push(`  <image href="${xmlEscape(screenshotHref)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none"/>`);
   lines.push('  <rect x="0" y="0" width="100%" height="100%" fill="#ffffff" fill-opacity="0.02" stroke="#94a3b8" stroke-dasharray="8 8"/>');
 
   observation.primitives.forEach((primitive, index) => {
@@ -1002,7 +1025,13 @@ export function loadProofFromFile(filePath) {
     throw new VisualProofError(`Unable to read proof file ${resolved}: ${error.message}`, { filePath: resolved });
   }
   try {
-    return JSON.parse(raw);
+    const proof = JSON.parse(raw);
+    Object.defineProperty(proof, PROOF_SOURCE_DIR, {
+      value: path.dirname(resolved),
+      enumerable: false,
+      configurable: true
+    });
+    return proof;
   } catch (error) {
     throw new VisualProofError(`Unable to parse proof JSON ${resolved}: ${error.message}`, { filePath: resolved });
   }
@@ -1021,8 +1050,8 @@ export function writeEvaluationArtifacts(proof, outDir) {
   const afterOverlayPath = path.join(resolvedOutDir, 'after-overlay.svg');
   writeFileSync(evaluationPath, `${JSON.stringify(evaluation, null, 2)}\n`, 'utf8');
   writeFileSync(reportPath, generateMarkdownReport(proof, evaluation), 'utf8');
-  writeFileSync(beforeOverlayPath, generateOverlaySvg(proof, 'before'), 'utf8');
-  writeFileSync(afterOverlayPath, generateOverlaySvg(proof, 'after'), 'utf8');
+  writeFileSync(beforeOverlayPath, generateOverlaySvg(proof, 'before', { outDir: resolvedOutDir }), 'utf8');
+  writeFileSync(afterOverlayPath, generateOverlaySvg(proof, 'after', { outDir: resolvedOutDir }), 'utf8');
   return {
     evaluation,
     paths: {

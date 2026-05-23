@@ -181,6 +181,6 @@ test('report generation writes machine and human readable artifacts', () => {
   const beforeOverlay = readFileSync(paths.overlays.before, 'utf8');
   assert.match(report, /Verdict:\*\* `fixed`/);
   assert.match(report, /Submit button must not overlap/);
-  assert.match(beforeOverlay, /<image href="artifacts\/before\/button-overlap-before\.png"/);
+  assert.match(beforeOverlay, /<image href="\.\.\/\.\.\/examples\/artifacts\/before\/button-overlap-before\.png"/);
   assert.match(generateMarkdownReport(fixture), /Boundary/);
 });
