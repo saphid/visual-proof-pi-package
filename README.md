@@ -103,6 +103,17 @@ See the five `skills/*/SKILL.md` files for full Pi skill instructions.
 
 See `docs/visual-proof-object.md`.
 
+## Public repository hygiene
+
+This repository is intended to be safe to make public as source code and documentation. It should not contain private screenshots, videos, browser profiles, DOM dumps from authenticated sessions, generated proof outputs, or secrets.
+
+- License: MIT; see `LICENSE`.
+- Security reporting and private-artifact cautions: `SECURITY.md`.
+- Contribution and validation guidance: `CONTRIBUTING.md`.
+- Public-readiness audit: `docs/public-release-audit.md`.
+
+Generated local outputs are ignored for both git and npm packing under `.visual-proof/`, `.visual-proof-test-output/`, `artifacts/`, and `.pi-autobrowse/`.
+
 ## Remaining non-goals
 
 - The verifier only checks supplied primitives and evidence.

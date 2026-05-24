@@ -1,7 +1,5 @@
-# Dependencies
+# Local dependencies / outputs
 node_modules/
-
-# Local Visual Proof / browser-capture outputs
 .visual-proof/
 .visual-proof-test-output/
 artifacts/
@@ -12,12 +10,14 @@ artifacts/
 .env.*
 !.env.example
 
-# Logs and temporary files
+# VCS/editor/local noise
+.git/
+.github/
+.DS_Store
+*.log
+*.tmp
+*.temp
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-*.log
-*.tmp
-*.temp
-.DS_Store

@@ -87,6 +87,8 @@ function validateManifest() {
   for (const keyword of implementedAdapterSkillIds) {
     assert(manifest.keywords.includes(keyword), `package.json keywords must include ${keyword}`);
   }
+  assert(manifest.license === 'MIT', 'package.json license must be MIT');
+  assert(manifest.private === true, 'package.json private=true intentionally prevents accidental npm publication before release metadata is finalized');
   assert(manifest.dependencies && Object.keys(manifest.dependencies).length === 0, 'dependencies must be empty for dependency-free local validation');
   assert(manifest.devDependencies && Object.keys(manifest.devDependencies).length === 0, 'devDependencies must be empty for dependency-free local validation');
   assert(manifest.scripts?.check === 'node scripts/check-package.mjs', 'npm run check must use the pure Node package checker');
@@ -121,7 +123,12 @@ function validateManifest() {
   requireFile('src/visual-proof-tools.mjs');
   requireFile('docs/visual-proof-object.md');
   requireFile('docs/visual-proof-process.md');
+  requireFile('docs/public-release-audit.md');
   requireFile('examples/button-overlap-proof.json');
+  requireFile('LICENSE');
+  requireFile('SECURITY.md');
+  requireFile('CONTRIBUTING.md');
+  requireFile('.npmignore');
 }
 
 function validateSkillHeader(skillId) {
@@ -262,7 +269,36 @@ function validateVisualFixLoopSkill() {
   assertIncludes(skill, '"implementationOwner": "ordinary project workflow"', 'visual-fix-loop must attribute app changes outside the skill');
 }
 
+function validatePublicReadiness() {
+  const license = readText('LICENSE');
+  assertIncludes(license, 'MIT License', 'LICENSE must contain the MIT license text');
+  assertIncludes(license, 'Visual Proof contributors', 'LICENSE must use contributor-oriented copyright holder');
+
+  const security = readText('SECURITY.md');
+  assertIncludes(security, 'Do **not** publish exploit details', 'SECURITY must warn against public sensitive disclosures');
+  assertIncludes(security, 'private vulnerability reporting', 'SECURITY must mention private vulnerability reporting');
+  assertIncludes(security, 'Do not commit private captures or generated local proof artifacts', 'SECURITY must include artifact hygiene guidance');
+
+  const contributing = readText('CONTRIBUTING.md');
+  assertIncludes(contributing, 'npm run check', 'CONTRIBUTING must include validation commands');
+  assertIncludes(contributing, 'Do not commit', 'CONTRIBUTING must include artifact hygiene');
+  assertIncludes(contributing, 'visual-proof', 'CONTRIBUTING must mention skill boundaries');
+
+  const audit = readText('docs/public-release-audit.md');
+  assertIncludes(audit, 'Status: **ready for public repository review**', 'public release audit must state review status');
+  assertIncludes(audit, 'No tracked binary capture assets', 'public release audit must summarize binary artifact audit');
+  assertIncludes(audit, 'private: true', 'public release audit must explain package private=true');
+
+  const gitignore = readText('.gitignore');
+  const npmignore = readText('.npmignore');
+  for (const pattern of ['artifacts/', '.visual-proof/', '.visual-proof-test-output/', '.pi-autobrowse/', '.env', '.env.*', '*.log']) {
+    assertIncludes(gitignore, pattern, `.gitignore must ignore ${pattern}`);
+    assertIncludes(npmignore, pattern, `.npmignore must ignore ${pattern}`);
+  }
+}
+
 function validateProcessDocs() {
+  validatePublicReadiness();
   const processDoc = readText('docs/visual-proof-process.md');
   assertNoStaleImplementedSkillWording(processDoc, 'process doc');
   assertIncludes(processDoc, 'The package currently implements five skills:', 'process doc must describe five implemented skills');
@@ -302,6 +338,10 @@ function validateProcessDocs() {
     assertIncludes(readme, expected.path, `README must list ${expected.path}`);
   }
   assertIncludes(readme, 'docs/visual-proof-process.md', 'README must link to the process doc');
+  assertIncludes(readme, '## Public repository hygiene', 'README must document public repository hygiene');
+  assertIncludes(readme, 'docs/public-release-audit.md', 'README must link to public release audit');
+  assertIncludes(readme, 'SECURITY.md', 'README must link to security policy');
+  assertIncludes(readme, 'CONTRIBUTING.md', 'README must link to contribution guidance');
   assertIncludes(readme, '## Remaining non-goals', 'README must document remaining non-goals');
   assertIncludes(readme, 'Hardening added by the skills:', 'README must summarize skill hardening');
   assertAllIncludes(readme, [
