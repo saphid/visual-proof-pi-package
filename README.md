@@ -1,5 +1,9 @@
 # Visual Proof Pi Package
 
+Inspired by the 2026 technical report [**Thinking with Visual Primitives**](https://huggingface.co/datasets/NodeLinker/deepseek-ai-Thinking-with-Visual-Primitives-deleted-repo/resolve/main/Thinking_with_Visual_Primitives.pdf) ([archived project mirror](https://github.com/ailuntx/Thinking-with-Visual-Primitives)) and the [Two Minute Papers video discussing it](https://www.youtube.com/watch?v=LpXhy2iiaQE), this package turns the idea of “point while you reason” into deterministic proof artifacts for UI fixes. It is not affiliated with DeepSeek, the paper authors, or Two Minute Papers.
+
+![Visual Proof README banner showing before/after UI boxes, points, paths, and proof panels](docs/assets/readme-banner.png)
+
 A dependency-free Pi package for proving UI visual fixes with Visual Proof Objects (VP1): screenshot/video metadata, grounded boxes/points/paths, deterministic predicates, explicit evidence, and concise reports.
 
 The package is split into composable Pi skills. It still does **not** ship browser automation dependencies, DOM runtime libraries, OCR, VLM calls, pixel diffing, or project-specific code fixing. The adapter skills are workflow contracts over supplied data and already-available tools; the deterministic VP1 verifier remains the final proof boundary.

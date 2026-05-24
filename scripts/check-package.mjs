@@ -124,6 +124,7 @@ function validateManifest() {
   requireFile('docs/visual-proof-object.md');
   requireFile('docs/visual-proof-process.md');
   requireFile('docs/public-release-audit.md');
+  requireFile('docs/assets/readme-banner.png');
   requireFile('examples/button-overlap-proof.json');
   requireFile('LICENSE');
   requireFile('SECURITY.md');
@@ -332,6 +333,12 @@ function validateProcessDocs() {
 
   const readme = readText('README.md');
   assertNoStaleImplementedSkillWording(readme, 'README');
+  assertIncludes(readme, '[**Thinking with Visual Primitives**](https://huggingface.co/datasets/NodeLinker/deepseek-ai-Thinking-with-Visual-Primitives-deleted-repo/resolve/main/Thinking_with_Visual_Primitives.pdf)', 'README must open with the Thinking with Visual Primitives paper reference');
+  assertIncludes(readme, '[archived project mirror](https://github.com/ailuntx/Thinking-with-Visual-Primitives)', 'README must link the archived project mirror for context');
+  assertIncludes(readme, '[Two Minute Papers video discussing it](https://www.youtube.com/watch?v=LpXhy2iiaQE)', 'README must open with the Two Minute Papers video reference');
+  assertIncludes(readme, '![Visual Proof README banner', 'README must include the generated banner image');
+  assertIncludes(readme, 'docs/assets/readme-banner.png', 'README must reference the generated banner image');
+  assertIncludes(readme, 'not affiliated with DeepSeek, the paper authors, or Two Minute Papers', 'README must avoid implying affiliation with referenced external work');
   assertIncludes(readme, '## Composable skill split', 'README must explain the composable skill split');
   assertIncludes(readme, 'Five Pi skills:', 'README must list five skills');
   for (const [, expected] of requiredSkills) {

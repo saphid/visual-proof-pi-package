@@ -10,7 +10,7 @@ This audit covers the Visual Proof Pi package repository contents intended for a
 
 Status: **ready for public repository review** after the cleanup in this document.
 
-The repository contains dependency-free source, tests, docs, plans, and skill contracts. No tracked binary capture assets, database files, `.env` files, browser profiles, or private screenshots/videos were found.
+The repository contains dependency-free source, tests, docs, plans, skill contracts, and one intentionally generated public README banner image. No tracked binary capture assets, database files, `.env` files, browser profiles, or private screenshots/videos were found.
 
 ## Commands run
 
@@ -26,6 +26,8 @@ node test/core.test.mjs
 node test/extension-smoke.test.mjs
 node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-public-demo
 git diff --check
+git diff --cached --check
+npm pack --dry-run --json
 ```
 
 ## Findings
@@ -34,6 +36,7 @@ git diff --check
 
 - No tracked `.env` files were found.
 - No tracked binary screenshots, videos, SQLite databases, or browser profile files were found.
+- `docs/assets/readme-banner.png` is an intentionally generated public illustration for the README, not a browser capture or private artifact.
 - Sensitive-word hits in tracked files are documentation examples and guardrails such as `authNotesNoSecrets`, `cookies`, `tokens`, and `API keys`; they do not contain real secret values.
 - Git history scan found the same documentation-only hits and no committed private Facebook artifacts or local home-directory paths in tracked project content.
 
@@ -54,6 +57,7 @@ git diff --check
 - Added `LICENSE` with the MIT license matching `package.json`.
 - Added `SECURITY.md` with reporting guidance and private-artifact cautions.
 - Added `CONTRIBUTING.md` with validation commands, boundary rules, and artifact hygiene.
+- README now opens with attribution/context links to the `Thinking with Visual Primitives` technical report and the Two Minute Papers video discussing it, plus a non-affiliation note.
 
 ## Final validation results
 
@@ -62,7 +66,8 @@ git diff --check
 - `node test/extension-smoke.test.mjs` — pass.
 - `node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-public-demo` — pass, verdict `fixed`.
 - `git diff --check` — pass.
-- `npm pack --dry-run --json` — reviewed; ignored local output directories and generated artifacts are not included, with explicit `.npmignore` coverage.
+- `git diff --cached --check` — pass.
+- `npm pack --dry-run --json` — reviewed; ignored local output directories and generated artifacts are not included, with explicit `.npmignore` coverage; the intentional README banner is included.
 
 ## Remaining publication notes
 
