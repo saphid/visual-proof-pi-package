@@ -94,3 +94,27 @@ Validation evidence for this adapter-skill slice:
 - `node test/core.test.mjs` — exit 0.
 - `node test/extension-smoke.test.mjs` — exit 0.
 - `node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-adapter-skills-demo` — exit 0. Verdict `fixed`; generated `evaluation.json`, `report.md`, `before-overlay.svg`, and `after-overlay.svg` in `/tmp/visual-proof-adapter-skills-demo`.
+
+## Skill hardening implementation — 2026-05-24
+
+Decisions:
+
+- Hardened the five Pi skill documents as dependency-free workflow contracts only; no browser automation, DOM runtime, OCR/VLM, pixel diffing, hashing, or validation dependencies were added.
+- Kept optional capture provenance documented but not core-enforced: `browser-capture` now recommends checksums when available, capture tool/command, timestamp, browser/device/version, viewport, `deviceScaleFactor`, `fullPage`, auth notes without secrets, and measured/supplied dimension source.
+- Added deterministic `dom-bridge` coordinate guidance for CSS viewport pixels to screenshot pixels, measured screenshot-vs-viewport scaling, `deviceScaleFactor` cross-checks, viewport vs `fullPage` screenshots, required full-page document extents (`documentWidthCss`/`documentHeightCss`), scroll offsets, and zoom/transform ambiguity stop conditions.
+- Added concrete blocked-output shapes across the skills so missing dimensions/video/provenance, unavailable or ambiguous images, ambiguous DOM alignment, incomplete fix-loop handoffs, and incomplete VP1 proof data stay explicit.
+- Preserved ownership boundaries: `visual-proof` remains the final VP1 verdict owner, `visual-primitives` must inspect the supplied image or block, and `visual-fix-loop` coordinates app changes without owning framework-specific fixes.
+- Extended the package checker with semantic phrase checks for the new hardening guardrails rather than large prose snapshots.
+
+Validation evidence for this hardening slice:
+
+- `npm run check` — exit 0. Validated all five skill hardening guardrails, README/process hardening summaries, fixture metadata, core tests, extension smoke, and the CLI demo under `.visual-proof-test-output/check-package`.
+- `node test/core.test.mjs` — exit 0.
+- `node test/extension-smoke.test.mjs` — exit 0.
+- `rm -rf /tmp/visual-proof-skill-hardening-demo && node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-skill-hardening-demo` — exit 0. Verdict `fixed`; generated `evaluation.json`, `report.md`, `before-overlay.svg`, and `after-overlay.svg`.
+- `git diff --check` — exit 0.
+
+Review follow-up:
+
+- X-high review rejected the first full-page screenshot formula because `screenshot.width / screenshot.viewport.width` is unsafe when a full-page capture includes horizontal overflow. The `dom-bridge` guidance now requires full-page CSS extents and uses `scaleX = screenshot.width / documentWidthCss` and `scaleY = screenshot.height / documentHeightCss`, with a narrow no-horizontal-overflow/width-equals-viewport shortcut and blocked output when extents are unavailable.
+- Codex Review then caught over-broad stop-condition wording. The final wording requires a clip origin only for clipped sub-rectangle captures, and requires the no-horizontal-overflow shortcut only when deriving `documentWidthCss` from viewport width rather than when explicit full-page extents are supplied.

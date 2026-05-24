@@ -38,6 +38,12 @@ Ask for the smallest set of data needed to ground the screenshot:
 
 Do not pretend to have browser, DOM, OCR, or VLM evidence when it was not supplied.
 
+## Inspect supplied image or block
+
+Inspect the supplied image before drawing primitives. Do not draw primitives from filename, path, alt text, route, DOM hints, or surrounding context alone. A screenshot path is only a reference; it is not visual evidence unless the image itself is available to inspect in the current task.
+
+If the image cannot be opened, rendered, or otherwise reviewed, return blocked/missing-data instead of coordinates. If inspection shows multiple plausible targets or an unclear boundary, ask for clarification or mark the primitive uncertain; do not hide ambiguity behind overconfident boxes.
+
 ## Output contract
 
 Return primitives in a JSON-friendly shape that can be pasted into a VP1 proof:
@@ -73,6 +79,36 @@ Return primitives in a JSON-friendly shape that can be pasted into a VP1 proof:
 
 Only include fields you can support from the supplied screenshot and task context. Predicate suggestions are not final proof results.
 
+## Blocked output shape
+
+If the image is unavailable, return a concrete blocked result:
+
+```json
+{
+  "status": "blocked",
+  "skill": "visual-primitives",
+  "blockedReason": "supplied screenshot image is unavailable",
+  "missing": ["screenshot.image or readable screenshot.path"],
+  "available": {
+    "path": "before.png",
+    "metadata": { "width": 1024, "height": 640, "route": "/checkout" }
+  },
+  "nextRequest": "Provide the actual screenshot image or a readable artifact attachment."
+}
+```
+
+If the target remains ambiguous after image inspection, block or request clarification:
+
+```json
+{
+  "status": "blocked",
+  "skill": "visual-primitives",
+  "blockedReason": "visual target ambiguous after inspection",
+  "ambiguous": ["two visible Submit buttons", "footer boundary hidden by modal shadow"],
+  "nextRequest": "Identify the intended target or provide a higher-resolution screenshot."
+}
+```
+
 ## Coordinate rules
 
 - Prefer `pixel` coordinates when screenshot dimensions are known.
@@ -91,6 +127,7 @@ Before handing off primitives:
 - Points land inside the intended target and are actionable for later hit-test evidence.
 - Paths have enough ordered points to make continuity meaningful.
 - Every predicate suggestion references existing primitive ids.
+- The supplied image was inspected; primitives are not based on filename, path, route, or surrounding context alone.
 - Uncertainty is surfaced in notes rather than hidden in overconfident coordinates.
 - Evidence-backed claims such as visible text or clickability are left for `dom-bridge`, other explicit evidence adapters, or for the `visual-proof` skill to require.
 

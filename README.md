@@ -29,6 +29,15 @@ Use the skills together when needed, but keep their responsibilities separate:
 4. `visual-proof` turns supplied observations into a before-only draft or complete before/after proof. It requires explicit evidence for visibility, text, and clickability, then evaluates the deterministic verdict.
 5. `visual-fix-loop` coordinates the overall fix workflow and calls the companion skills in sequence. It reports fixed only by citing the `visual-proof` output.
 
+Hardening added by the skills:
+
+- `browser-capture` recommends optional provenance such as `sha256`/checksum when available, capture command/tool, timestamp, browser/device/version, viewport, `deviceScaleFactor`, `fullPage`, auth notes without secrets, and whether dimensions were measured or supplied.
+- `dom-bridge` documents CSS viewport pixels to screenshot pixels conversion, including screenshot-vs-viewport scaling, `deviceScaleFactor`, `fullPage` vs viewport captures, required full-page document extents, scroll offsets, zoom/transforms, and ambiguity stop conditions.
+- `visual-primitives` must inspect the supplied image or return blocked/missing-data; paths, filenames, routes, and surrounding context alone are not enough to draw primitives.
+- Each workflow skill has a concrete blocked output shape so missing dimensions, missing video, unavailable images, ambiguous DOM alignment, or incomplete proof inputs stay explicit.
+
+These are documentation and handoff contracts only; they do not add browser, DOM, OCR, VLM, hashing, or pixel-diff runtime capabilities.
+
 See `docs/visual-proof-process.md` for the phase map, handoff contracts, and non-goals.
 
 ## Phase map
@@ -98,7 +107,7 @@ See `docs/visual-proof-object.md`.
 
 - The verifier only checks supplied primitives and evidence.
 - It does not inspect image pixels, inspect live DOM, or verify that screenshot/video files exist.
-- The adapter skills do not add runtime dependencies, browser drivers, Playwright installs, DOM libraries, OCR engines, VLM calls, pixel-diff engines, or site-specific browser behavior.
+- The adapter skills do not add runtime dependencies, browser drivers, Playwright installs, DOM libraries, OCR engines, VLM calls, pixel-diff engines, hashing libraries, or site-specific browser behavior.
 - Evidence-backed predicates fail on missing evidence instead of guessing.
 - Final `fixed`, `passing`, `regressed`, or `still_failing` verdicts belong to `visual-proof` output only.
 - The included fixture is synthetic so local validation remains deterministic and dependency-free.

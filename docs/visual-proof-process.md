@@ -26,6 +26,14 @@ These skills are dependency-free instructions and contracts. They may call or co
 | 8. Verify and report | Evaluate before/after predicates and write artifacts. | `visual-proof` | `evaluation.json`, `report.md`, overlay SVGs, verdict | Requires complete VP1 inputs; no guessing |
 | 9. Handoff/closeout | Explain verdict, artifacts, missing evidence, and any remaining risk. | Agent or `visual-fix-loop` citing `visual-proof` output | Reviewable final evidence summary | Missing evidence remains explicit |
 
+## Hardened handoff rules
+
+- Optional capture provenance: `browser-capture` should record available `sha256`/checksum, capture command/tool, timestamp, browser/device/version, viewport, `deviceScaleFactor`, `fullPage`, auth notes without secrets, and measured/supplied dimension source. These fields are recommended metadata, not new VP1 core requirements.
+- Coordinate alignment: `dom-bridge` must convert CSS viewport pixels to screenshot pixels with measured screenshot-vs-viewport scale, `deviceScaleFactor` as a cross-check, `fullPage` vs viewport capture mode, full-page document extents (`documentWidthCss`/`documentHeightCss`), and scroll offsets. If zoom, transforms, clip origins, sticky/fixed full-page behavior, missing full-page extents, or scale ambiguity make the mapping uncertain, it blocks instead of emitting precise primitives.
+- Inspect images or block: `visual-primitives` must inspect the supplied image before drawing boxes, points, or paths. It should return blocked/missing-data when only a filename, path, route, or text context is available.
+- Blocked handoffs: every workflow skill that can block has a JSON-friendly blocked output shape with `status: "blocked"`, missing fields, and a next request. Missing metadata/evidence remains explicit rather than being guessed.
+- Implementation ownership: `visual-fix-loop` coordinates ordinary app changes but does not choose framework-specific code changes, and no skill except `visual-proof` owns the final VP1 verdict.
+
 ## Current skill boundaries
 
 ### `browser-capture`
@@ -33,7 +41,7 @@ These skills are dependency-free instructions and contracts. They may call or co
 Use this skill when the task needs screenshot or video metadata. It owns capture requests and metadata normalization:
 
 - screenshot `path`, `width`, `height`, `viewport`, and `route` or `url`;
-- capture source notes, timestamp, device/viewport context, and reproducible route/state details;
+- recommended optional provenance such as `sha256`/checksum when available, capture source/command, timestamp, browser/device/version, viewport, `deviceScaleFactor`, `fullPage`, auth-state notes without secrets, and measured/supplied dimension source;
 - after video metadata with `path` plus duration and `frameCount` or `sampledFrames` for complete proof acceptance.
 
 It can use supplied files, browser worker outputs, Pi Autobrowse, Playwright, or a user/test harness. It does not draw primitives, inspect DOM evidence, fix application code, evaluate a VP1 proof, or declare the visual result fixed.
@@ -47,7 +55,7 @@ Use this skill when explicit DOM-related data is available and should become VP1
 - hit-test results as `evidence.clickTargets`;
 - text or accessible-name sources as `evidence.detectedText`.
 
-It may reduce manual drawing, but all outputs remain reviewable. It does not silently infer final visual truth, replace screenshot grounding, evaluate the proof, or declare fixed.
+It may reduce manual drawing, but all outputs remain reviewable. It must align CSS viewport pixels to screenshot pixels using explicit capture scale, `fullPage` mode, full-page document extents, scroll offsets, and transform/zoom context; when that mapping is ambiguous, it blocks or emits evidence-only notes. It does not silently infer final visual truth, replace screenshot grounding, evaluate the proof, or declare fixed.
 
 ### `visual-primitives`
 
@@ -57,7 +65,7 @@ Use this skill when the screenshot exists and the immediate task is to identify 
 - points for click centers, focus targets, or reference anchors;
 - paths for focus travel, gestures, or continuity checks.
 
-It may review `dom-bridge` candidates, suggest predicates, or prepare a draft handoff for `visual-proof`, but it does not inspect DOM, capture browsers, run OCR/VLM tooling, fix code, evaluate complete proofs, or declare the UI fixed.
+It may review `dom-bridge` candidates, suggest predicates, or prepare a draft handoff for `visual-proof`, but it must inspect the supplied image before drawing and block when only a filename/path/context is available. It does not inspect DOM, capture browsers, run OCR/VLM tooling, fix code, evaluate complete proofs, or declare the UI fixed.
 
 ### `visual-proof`
 
@@ -81,7 +89,7 @@ Use this skill when a bug-fix task needs end-to-end coordination. It owns sequen
 6. recapture and refresh evidence/primitives;
 7. call `visual-proof` for the complete before/after proof.
 
-It does not perform the delegated steps internally and does not replace the `visual-proof` verdict.
+It does not perform the delegated steps internally, does not choose framework-specific code changes, and does not replace the `visual-proof` verdict.
 
 ## Minimal composable flow
 

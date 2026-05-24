@@ -63,6 +63,12 @@ function assertIncludes(text, needle, message) {
   assert(text.includes(needle), message);
 }
 
+function assertAllIncludes(text, needles, label) {
+  for (const needle of needles) {
+    assertIncludes(text, needle, `${label} must include ${needle}`);
+  }
+}
+
 function assertNoStaleImplementedSkillWording(text, label) {
   for (const skillId of implementedAdapterSkillIds) {
     const escapedId = skillId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -140,6 +146,10 @@ function validateVisualProofSkill() {
   assert(!skill.includes('`route` or `url` when known'), 'visual-proof must not imply route/url is optional for validated draft screenshots');
   assertIncludes(skill, 'It never gives a final `fixed` verdict without a complete before/after VP1 proof.', 'visual-proof must not claim a final verdict without complete proof data');
   assertIncludes(skill, 'Do not infer these from the screenshot path alone.', 'visual-proof must be honest about evidence-backed predicates');
+  assertIncludes(skill, '## Predicate/evidence summary', 'visual-proof must include a compact predicate/evidence table');
+  assertIncludes(skill, '| Predicate type | Data needed | Blocks if |', 'visual-proof predicate table must document blocking conditions');
+  assertIncludes(skill, '"blockedReason": "complete proof cannot be evaluated"', 'visual-proof must include a concrete blocked output example');
+  assertIncludes(skill, '"verdictSource": "visual-proof"', 'visual-proof blocked/evaluation handoff must name itself as verdict source');
 }
 
 function validateVisualPrimitivesSkill() {
@@ -157,6 +167,10 @@ function validateVisualPrimitivesSkill() {
   assertIncludes(skill, '"primitives": ["submit_button", "footer"]', 'visual-primitives predicate suggestions must use VP1-compatible primitive arrays');
   assertIncludes(skill, '"to": "visual-proof"', 'visual-primitives must document draft handoff to visual-proof');
   assertIncludes(skill, 'Evidence-backed claims such as visible text or clickability are left for `dom-bridge`, other explicit evidence adapters, or for the `visual-proof` skill to require.', 'visual-primitives must not replace evidence-backed proof');
+  assertIncludes(skill, '## Inspect supplied image or block', 'visual-primitives must require image inspection or block');
+  assertIncludes(skill, 'Do not draw primitives from filename, path, alt text, route, DOM hints, or surrounding context alone.', 'visual-primitives must reject filename/path/context-only drawing');
+  assertIncludes(skill, '"blockedReason": "supplied screenshot image is unavailable"', 'visual-primitives must include unavailable-image blocked example');
+  assertIncludes(skill, '"blockedReason": "visual target ambiguous after inspection"', 'visual-primitives must include ambiguous-target blocked example');
 }
 
 function validateBrowserCaptureSkill() {
@@ -173,6 +187,25 @@ function validateBrowserCaptureSkill() {
   assertIncludes(skill, '"to": "visual-primitives"', 'browser-capture must hand off to visual-primitives');
   assertIncludes(skill, '"to": "dom-bridge"', 'browser-capture must hand off to dom-bridge when DOM/evidence is available');
   assertIncludes(skill, '"to": "visual-proof"', 'browser-capture must hand off to visual-proof');
+  assertIncludes(skill, '## Recommended optional provenance', 'browser-capture must document optional provenance');
+  assertIncludes(skill, 'recommended when already available; they are not required by VP1 core validation', 'browser-capture provenance must stay optional');
+  assertAllIncludes(skill, [
+    '`sha256`',
+    '`checksum`',
+    '`captureCommand`',
+    '`timestamp`',
+    '`browser`',
+    '`device`',
+    '`version`',
+    '`viewport`',
+    '`deviceScaleFactor`',
+    '`fullPage`',
+    '`authNotesNoSecrets`',
+    '`dimensionsSource`'
+  ], 'browser-capture provenance');
+  assertIncludes(skill, '"blockedReason": "missing screenshot dimensions"', 'browser-capture must include missing-dimensions blocked example');
+  assertIncludes(skill, '"blockedReason": "after video metadata required for complete VP1 proof"', 'browser-capture must include missing-video blocked example');
+  assertIncludes(skill, '"blockedReason": "requested capture provenance is unavailable"', 'browser-capture must include requested-provenance blocked example');
 }
 
 function validateDomBridgeSkill() {
@@ -186,6 +219,29 @@ function validateDomBridgeSkill() {
   assertIncludes(skill, 'Evidence is not a proof verdict.', 'dom-bridge must distinguish evidence from proof verdicts');
   assertIncludes(skill, '"to": "visual-primitives"', 'dom-bridge must hand candidates to visual-primitives when review is needed');
   assertIncludes(skill, '"to": "visual-proof"', 'dom-bridge must hand accepted evidence to visual-proof');
+  assertIncludes(skill, '## Coordinate alignment rules', 'dom-bridge must document coordinate alignment rules');
+  assertAllIncludes(skill, [
+    'CSS viewport pixels',
+    'screenshot pixels',
+    '`deviceScaleFactor`',
+    'scaleX = screenshot.width / screenshot.viewport.width',
+    'scaleY = screenshot.height / screenshot.viewport.height',
+    'fullPage: false',
+    'fullPage: true',
+    '`documentWidthCss` and `documentHeightCss`',
+    'documentXCss = rect.left + scrollX',
+    'documentYCss = rect.top + scrollY',
+    'scaleX = screenshot.width / documentWidthCss',
+    'scaleY = screenshot.height / documentHeightCss',
+    'no horizontal scroll/overflow',
+    'Missing capture clip origin when the capture is a clipped sub-rectangle.',
+    'missing `documentHeightCss`, or missing `documentWidthCss` without the explicit no-horizontal-overflow/full-page-width-equals-viewport guarantee',
+    'Do not add scroll offsets for a viewport screenshot.',
+    'Screenshot-vs-viewport scaling',
+    'Zoom/transforms/ambiguity stop conditions',
+    'block instead of converting'
+  ], 'dom-bridge coordinate alignment');
+  assertIncludes(skill, '"blockedReason": "cannot align CSS viewport pixels to screenshot pixels"', 'dom-bridge must include coordinate-alignment blocked example');
 }
 
 function validateVisualFixLoopSkill() {
@@ -199,6 +255,11 @@ function validateVisualFixLoopSkill() {
   assertIncludes(skill, '`visual-primitives`', 'visual-fix-loop must call visual-primitives');
   assertIncludes(skill, '`visual-proof`', 'visual-fix-loop must call visual-proof');
   assertIncludes(skill, 'complete before/after VP1 proof', 'visual-fix-loop must require complete proof before fixed claims');
+  assertIncludes(skill, 'does not choose or own React, CSS, framework, or app-specific fix strategy', 'visual-fix-loop must avoid framework-specific fix ownership');
+  assertIncludes(skill, '## Blocked and transition output shapes', 'visual-fix-loop must document blocked and transition shapes');
+  assertIncludes(skill, '"status": "blocked"', 'visual-fix-loop must include concrete blocked output');
+  assertIncludes(skill, '"transition": "fixing -> recapture-needed"', 'visual-fix-loop must include recapture transition output');
+  assertIncludes(skill, '"implementationOwner": "ordinary project workflow"', 'visual-fix-loop must attribute app changes outside the skill');
 }
 
 function validateProcessDocs() {
@@ -221,6 +282,17 @@ function validateProcessDocs() {
     assertIncludes(processDoc, `\`${skillId}\``, `process doc must mention ${skillId}`);
   }
   assertIncludes(processDoc, 'No skill except `visual-proof` owns final VP1 verdict evaluation.', 'process doc must keep final verdict ownership with visual-proof');
+  assertIncludes(processDoc, '## Hardened handoff rules', 'process doc must summarize hardened handoff rules');
+  assertAllIncludes(processDoc, [
+    'Optional capture provenance',
+    'Coordinate alignment',
+    'CSS viewport pixels to screenshot pixels',
+    '`deviceScaleFactor`',
+    '`fullPage`',
+    'Inspect images or block',
+    'Blocked handoffs',
+    'does not choose framework-specific code changes'
+  ], 'process doc hardening');
 
   const readme = readText('README.md');
   assertNoStaleImplementedSkillWording(readme, 'README');
@@ -231,6 +303,18 @@ function validateProcessDocs() {
   }
   assertIncludes(readme, 'docs/visual-proof-process.md', 'README must link to the process doc');
   assertIncludes(readme, '## Remaining non-goals', 'README must document remaining non-goals');
+  assertIncludes(readme, 'Hardening added by the skills:', 'README must summarize skill hardening');
+  assertAllIncludes(readme, [
+    'optional provenance',
+    '`sha256`/checksum',
+    'CSS viewport pixels to screenshot pixels',
+    'screenshot-vs-viewport scaling',
+    '`deviceScaleFactor`',
+    '`fullPage`',
+    'inspect the supplied image or return blocked/missing-data',
+    'concrete blocked output shape',
+    'do not add browser, DOM, OCR, VLM, hashing, or pixel-diff runtime capabilities'
+  ], 'README hardening');
 }
 
 function validateSkills() {

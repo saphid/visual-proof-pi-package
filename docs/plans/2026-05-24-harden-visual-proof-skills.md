@@ -41,8 +41,8 @@
 
 | Slice | Status | Depends on | Parallel? | Expected files | Validation |
 |---|---|---|---|---|---|
-| S1 Skill-contract hardening | pending | none | no | `skills/browser-capture/SKILL.md`, `skills/dom-bridge/SKILL.md`, `skills/visual-primitives/SKILL.md`, `skills/visual-fix-loop/SKILL.md`, `skills/visual-proof/SKILL.md` | `npm run check`, focused read-through |
-| S2 Package docs and checker guardrails | pending | S1 | no | `README.md`, `docs/visual-proof-process.md`, `scripts/check-package.mjs`, `implementation-notes.md` | full validation commands |
+| S1 Skill-contract hardening | complete | none | no | `skills/browser-capture/SKILL.md`, `skills/dom-bridge/SKILL.md`, `skills/visual-primitives/SKILL.md`, `skills/visual-fix-loop/SKILL.md`, `skills/visual-proof/SKILL.md` | `npm run check`, focused read-through |
+| S2 Package docs and checker guardrails | complete | S1 | no | `README.md`, `docs/visual-proof-process.md`, `scripts/check-package.mjs`, `implementation-notes.md` | full validation commands |
 
 ## Global acceptance criteria
 
@@ -71,7 +71,7 @@
 
 ## Slice S1: Skill-contract hardening
 
-**Status:** pending
+**Status:** complete
 
 **Purpose:** Make each skill more usable under real-world conditions without changing runtime behavior or ownership boundaries.
 
@@ -92,12 +92,12 @@
 - Current five `skills/*/SKILL.md` files.
 
 **Steps:**
-- [ ] Read current skills and VP1 object docs.
-- [ ] Add `dom-bridge` coordinate conversion section with formulas and stop conditions.
-- [ ] Add `browser-capture` provenance section with optional fields and privacy/secrets guardrail.
-- [ ] Add blocked-output examples to each skill where missing data is likely.
-- [ ] Tighten `visual-fix-loop` implementation wording so it coordinates rather than owns app-specific fixes.
-- [ ] Avoid unnecessary prose expansion; prefer tables and compact JSON shapes.
+- [x] Read current skills and VP1 object docs.
+- [x] Add `dom-bridge` coordinate conversion section with formulas and stop conditions.
+- [x] Add `browser-capture` provenance section with optional fields and privacy/secrets guardrail.
+- [x] Add blocked-output examples to each skill where missing data is likely.
+- [x] Tighten `visual-fix-loop` implementation wording so it coordinates rather than owns app-specific fixes.
+- [x] Avoid unnecessary prose expansion; prefer tables and compact JSON shapes.
 
 **Acceptance:**
 - New guidance is concrete enough for an agent to avoid DOM/screenshot coordinate lies.
@@ -109,14 +109,16 @@
 - Manual grep/read-through for `deviceScaleFactor`, `fullPage`, `scroll`, `blocked`, and `verdictSource`.
 
 **Critical findings for next slice:**
-- Fill with any exact phrases/sections that S2 checker should lock down.
+- S2 checker should lock down `browser-capture` optional provenance fields (`sha256`/checksum, `captureCommand`, `timestamp`, browser/device/version, viewport, `deviceScaleFactor`, `fullPage`, auth notes without secrets, and `dimensionsSource`) while keeping them documentation-only.
+- S2 checker should lock down `dom-bridge` coordinate alignment phrases for CSS viewport pixels, screenshot pixels, `deviceScaleFactor`, measured scale formulas, `fullPage`, `scrollX`/`scrollY`, and zoom/transform ambiguity stop conditions.
+- S2 checker should lock down concrete blocked output examples, the `visual-primitives` inspect-image-or-block rule, and `visual-fix-loop` framework-specific fix ownership boundary.
 
 **Blockers / escape-hatch notes:**
 - If the coordinate conversion rules become implementation-specific or misleading, stop and document `no fix`: the skill should require supplied, already-aligned boxes instead of pretending to convert them.
 
 ## Slice S2: Package docs and checker guardrails
 
-**Status:** pending
+**Status:** complete
 
 **Purpose:** Make the repo-level docs and validation enforce the hardening from S1 without changing verifier semantics.
 
@@ -136,10 +138,10 @@
 - Validation commands from the review header.
 
 **Steps:**
-- [ ] Update README/process docs with the hardened boundaries.
-- [ ] Add checker assertions for important durable guardrails: DOM scaling/scroll/DPR/full-page ambiguity, capture provenance fields, blocked examples, inspect-image-or-block rule, and fix-loop verdict ownership.
-- [ ] Run validation and update notes.
-- [ ] Keep generated validation artifacts ignored and out of the commit.
+- [x] Update README/process docs with the hardened boundaries.
+- [x] Add checker assertions for important durable guardrails: DOM scaling/scroll/DPR/full-page ambiguity, capture provenance fields, blocked examples, inspect-image-or-block rule, and fix-loop verdict ownership.
+- [x] Run validation and update notes.
+- [x] Keep generated validation artifacts ignored and out of the commit.
 
 **Acceptance:**
 - `npm run check` passes and would fail if the major hardening sections were removed.
@@ -154,7 +156,7 @@
 - `git diff --check` — whitespace.
 
 **Critical findings for next slice:**
-- None; final closeout should run blocker-only review plus Codex/x-hi review before merge.
+- None; checker guardrails and docs were updated for the approved hardening scope. Final closeout should run review before merge.
 
 **Blockers / escape-hatch notes:**
 - If checker assertions become brittle prose snapshots, simplify them to semantic phrase checks; `no fix` is valid for enforcing stylistic trimming in code.

@@ -14,7 +14,7 @@ This is the proof layer only. If a broader task also involves capturing a browse
 - Building VP1 JSON from supplied before/after observations.
 - Selecting deterministic predicates such as `not_overlapping`, `inside`, `aligned`, `count_equals`, `path_continuous`, `visible`, `text_present`, and `clickable`.
 - Saving a before-only draft when only the failing observation is available.
-- Evaluating a complete before/after proof and reporting `fixed`, `passing`, `regressed`, or `still_failing`.
+- Evaluating a complete before/after proof and reporting `fixed`, `passing`, `regressed`, or `still_failing`; this is the final VP1 verdict owner in the skill set.
 - Explaining missing metadata or evidence without guessing.
 
 ## Does not own
@@ -38,6 +38,17 @@ For full evaluation, also require:
 - After video metadata: `path` plus duration and `frameCount` or `sampledFrames`.
 - After primitives using the same ids when the same visual objects still exist.
 - Updated explicit evidence for visibility, text, and clickability predicates.
+
+## Predicate/evidence summary
+
+| Predicate type | Data needed | Blocks if |
+| --- | --- | --- |
+| `not_overlapping`, `inside`, `aligned`, `count_equals`, `path_continuous` | Supplied VP1 `box`, `point`, or `path` primitives in a known coordinate space | referenced primitive ids are missing or malformed |
+| `visible` | `evidence.visibility[subject].visible === true` | visibility evidence is missing or false |
+| `text_present` | `evidence.detectedText` entry matching the expected text | explicit text evidence is missing or does not match |
+| `clickable` | `evidence.clickTargets[subject].clickable === true` | click-target evidence is missing or false |
+
+Missing data should produce a draft or blocked handoff, not a guessed final verdict.
 
 ## Evidence rule
 
@@ -88,11 +99,27 @@ Return either a before-only draft, a complete proof evaluation, or a blocked/mis
   "proofPath": "visual-proof.json",
   "verdict": "draft|fixed|passing|regressed|still_failing",
   "artifacts": ["evaluation.json", "report.md", "before-overlay.svg", "after-overlay.svg"],
-  "missing": ["after.video.frameCount", "evidence.clickTargets.submit_button"]
+  "missing": ["after.video.frameCount", "evidence.clickTargets.submit_button"],
+  "verdictSource": "visual-proof"
 }
 ```
 
 Only include a final verdict when `visual-proof` has evaluated a complete before/after VP1 proof.
+
+Concrete blocked example:
+
+```json
+{
+  "to": "visual-proof",
+  "status": "blocked",
+  "blockedReason": "complete proof cannot be evaluated",
+  "proofPath": "visual-proof.json",
+  "verdict": "draft",
+  "verdictSource": "visual-proof",
+  "missing": ["observations.after.video.frameCount", "observations.after.evidence.clickTargets.submit_button"],
+  "nextRequest": "Provide after video frame metadata and explicit click-target evidence before final evaluation."
+}
+```
 
 ## When to ask for more data
 

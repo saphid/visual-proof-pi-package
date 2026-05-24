@@ -22,6 +22,8 @@ This is the orchestration layer only. The canonical sequence is reproduce → ca
 
 This skill does not capture browsers directly, draw primitives directly, inspect DOM directly, own project-specific code changes, evaluate VP1 predicates itself, or declare the final fixed verdict. It delegates final verdict to `visual-proof` and cites that output when reporting completion.
 
+It may coordinate app changes performed by the ordinary implementation workflow, but it does not choose or own React, CSS, framework, or app-specific fix strategy.
+
 ## Inputs to request
 
 Ask for enough context to coordinate the loop:
@@ -64,6 +66,43 @@ Return a loop status that references delegated skill outputs:
 
 Only include `verdict: "fixed"` when `visual-proof` has evaluated a complete before/after VP1 proof and returned `fixed`. Otherwise report the current status and missing handoff data.
 
+## Blocked and transition output shapes
+
+When the loop lacks required delegated inputs, keep it blocked instead of implying progress:
+
+```json
+{
+  "status": "blocked",
+  "skill": "visual-fix-loop",
+  "blockedReason": "cannot create before proof draft",
+  "missing": ["browser-capture.before.screenshot.width", "visual-primitives.primitives"],
+  "nextDelegation": [
+    { "to": "browser-capture", "reason": "provide measured before screenshot metadata" },
+    { "to": "visual-primitives", "reason": "inspect supplied image and draw target primitives" }
+  ],
+  "verdictSource": "visual-proof",
+  "verdict": null
+}
+```
+
+When implementation work is done by the ordinary project workflow, report the transition without owning the framework-specific fix:
+
+```json
+{
+  "status": "recapture-needed",
+  "skill": "visual-fix-loop",
+  "transition": "fixing -> recapture-needed",
+  "implementationOwner": "ordinary project workflow",
+  "appChangeSummary": "Implementation workflow adjusted checkout layout; this skill only coordinates recapture and proof.",
+  "nextDelegation": [
+    { "to": "browser-capture", "reason": "collect after screenshot and video metadata" },
+    { "to": "visual-proof", "reason": "evaluate after primitives/evidence when complete" }
+  ],
+  "verdictSource": "visual-proof",
+  "verdict": "not-evaluated"
+}
+```
+
 ## Workflow
 
 1. **Reproduce and define the claim**
@@ -85,7 +124,7 @@ Only include `verdict: "fixed"` when `visual-proof` has evaluated a complete bef
 
 5. **Implement the project-specific fix**
    - Make the narrow app change in the host project using the ordinary implementation workflow.
-   - Keep this skill focused on sequencing and evidence; it does not prescribe framework-specific code changes.
+   - Keep this skill focused on sequencing and evidence; it does not prescribe, choose, or own framework-specific code changes.
 
 6. **Recapture and refresh proof inputs**
    - Use `browser-capture` for after screenshot metadata and required after video metadata.
@@ -106,7 +145,7 @@ Before reporting the loop complete:
 
 - The before state was captured and saved or referenced.
 - The before proof draft exists and records failing predicates or missing evidence.
-- The app change is separate from proof generation and is validated by project-appropriate checks.
+- The app change is separate from proof generation, owned by the ordinary project workflow, and validated by project-appropriate checks.
 - The after state includes screenshot metadata and after video metadata.
 - Primitives and explicit evidence were refreshed after the fix when needed.
 - `visual-proof` evaluated the complete proof.
