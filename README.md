@@ -4,16 +4,60 @@ Inspired by the 2026 technical report [**Thinking with Visual Primitives**](http
 
 ![Visual Proof README banner showing before/after UI boxes, points, paths, and proof panels](docs/assets/readme-banner.png)
 
-A dependency-free Pi package for proving UI visual fixes with Visual Proof Objects (VP1): screenshot/video metadata, grounded boxes/points/paths, deterministic predicates, explicit evidence, and concise reports.
+Visual Proof is a small Pi package for proving that a visual UI bug was actually fixed. The point is not to run another vague screenshot comparison and hope the agent guessed correctly. The point is to turn the claim into inspectable evidence: screenshots, video metadata, boxes, points, paths, predicates, explicit DOM/text/clickability evidence, and a final deterministic verdict.
+
+It is intentionally boring in the same way good infrastructure is boring. It takes supplied observations, checks them, writes artifacts, and stays out of everything else.
+
+## What this is
+
+Visual Proof gives agents a way to say:
+
+> “Here is the broken before state. Here is the fixed after state. Here are the exact visual primitives and predicates. Here is the report. The verifier says `fixed`.”
+
+A Visual Proof Object (VP1) is just structured data:
+
+- screenshot/video metadata
+- grounded `box`, `point`, and `path` primitives
+- deterministic predicates like `not_overlapping`, `inside`, `visible`, `text_present`, and `clickable`
+- explicit evidence for things the geometry alone cannot prove
+- generated `evaluation.json`, `report.md`, and overlay SVGs
+
+That separation matters because visual bugs are easy to hand-wave. This package makes the mechanism visible.
+
+## What it is not
+
+This is not a browser automation framework. It is not an OCR engine. It is not a VLM wrapper. It is not a pixel-diff tool. It is not a site-specific fixer.
 
 The package is split into composable Pi skills. It still does **not** ship browser automation dependencies, DOM runtime libraries, OCR, VLM calls, pixel diffing, or project-specific code fixing. The adapter skills are workflow contracts over supplied data and already-available tools; the deterministic VP1 verifier remains the final proof boundary.
+
+## Quick start
+
+No `npm install` is required.
+
+```bash
+node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-demo
+```
+
+Expected verdict: `fixed`.
+
+The demo fixture is a synthetic checkout UI bug:
+
+- Before: the submit button overlaps a sticky footer and the explicit click-target evidence says it is not clickable.
+- After: the submit button is inside the main content region, does not overlap the footer, has after screenshot metadata, and includes after video metadata.
+
+It writes:
+
+- `/tmp/visual-proof-demo/evaluation.json`
+- `/tmp/visual-proof-demo/report.md`
+- `/tmp/visual-proof-demo/before-overlay.svg`
+- `/tmp/visual-proof-demo/after-overlay.svg`
 
 ## What it exposes
 
 - One Pi extension: `extensions/visual-proof/index.ts`
-  - `visual_proof_create` (complete proofs or before-only drafts)
-  - `visual_proof_evaluate`
-  - `visual_proof_report`
+  - `visual_proof_create` — create complete proofs or before-only drafts
+  - `visual_proof_evaluate` — evaluate a VP1 proof and write artifacts
+  - `visual_proof_report` — regenerate report artifacts from a proof
 - Five Pi skills:
   - `skills/visual-proof/SKILL.md` — proof-only VP1 creation/evaluation from supplied metadata, primitives, predicates, and evidence.
   - `skills/visual-primitives/SKILL.md` — drawing/pointing-only production of VP1-compatible boxes, points, and paths from supplied screenshots.
@@ -25,9 +69,9 @@ The package is split into composable Pi skills. It still does **not** ship brows
 
 ## Composable skill split
 
-Use the skills together when needed, but keep their responsibilities separate:
+Use the skills together when a task needs the full loop, but keep the ownership clean. This is the part that prevents the proof from becoming vibes again.
 
-1. `browser-capture` obtains or normalizes screenshot/video metadata from a user, browser worker, Pi Autobrowse, Playwright, or test harness. It does not draw primitives, inspect DOM evidence, fix app code, or decide a VP1 verdict.
+1. `browser-capture` gets or normalizes screenshot/video metadata from a user, browser worker, Pi Autobrowse, Playwright, or test harness. It does not draw primitives, inspect DOM evidence, fix app code, or decide a VP1 verdict.
 2. `dom-bridge` converts supplied DOM, selector, hit-test, computed-style, accessibility, or text data into candidate VP1 primitives and explicit evidence fields. It does not hide visual proof decisions or claim the UI is fixed.
 3. `visual-primitives` grounds what is visible in a supplied screenshot as VP1 primitives. It can suggest predicates or a draft handoff, but it has no DOM authority and no final fixed verdict.
 4. `visual-proof` turns supplied observations into a before-only draft or complete before/after proof. It requires explicit evidence for visibility, text, and clickability, then evaluates the deterministic verdict.
@@ -57,27 +101,18 @@ See `docs/visual-proof-process.md` for the phase map, handoff contracts, and non
 | Capture after state and video metadata | `browser-capture` |
 | Evaluate and report VP1 verdict | `visual-proof` |
 
-## Run the demo
+## Typical agent workflow
 
-No `npm install` is required.
+1. Capture or supply the before screenshot metadata with `browser-capture`.
+2. Pull selector, hit-test, computed-style, accessibility, or text evidence through `dom-bridge` if it exists.
+3. Draw or correct boxes, points, and paths with `visual-primitives`.
+4. Create the before-only VP1 draft with `visual-proof`.
+5. Fix the app outside this package. Use `visual-fix-loop` if you want the whole reproduce/fix/recapture/proof sequence coordinated.
+6. Capture the after screenshot and required after video metadata.
+7. Refresh DOM evidence and primitives if the fix changed layout or interaction state.
+8. Evaluate the complete before/after proof with `visual-proof` and keep the report next to the bug-fix evidence.
 
-```bash
-node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp/visual-proof-demo
-```
-
-Expected verdict: `fixed`.
-
-The demo fixture proves a synthetic checkout UI bug:
-
-- Before: the submit button overlaps a sticky footer and the explicit click-target evidence says it is not clickable.
-- After: the submit button is inside the main content region, does not overlap the footer, has after screenshot metadata, and includes after video metadata.
-
-Generated artifacts:
-
-- `/tmp/visual-proof-demo/evaluation.json`
-- `/tmp/visual-proof-demo/report.md`
-- `/tmp/visual-proof-demo/before-overlay.svg`
-- `/tmp/visual-proof-demo/after-overlay.svg`
+See the five `skills/*/SKILL.md` files for full Pi skill instructions.
 
 ## Validate locally
 
@@ -89,19 +124,6 @@ node bin/visual-proof.mjs evaluate examples/button-overlap-proof.json --out /tmp
 ```
 
 All validation is pure Node.js and dependency-free.
-
-## Workflow for agents
-
-1. Use `browser-capture` or a supplied harness artifact to get before screenshot metadata.
-2. Use `dom-bridge` when selectors, DOM boxes, hit tests, computed styles, accessibility snapshots, or text evidence are available.
-3. Use `visual-primitives` when boxes, points, or paths need to be drawn or corrected from the screenshot.
-4. Use `visual-proof` to create a VP1 before-only draft with predicates and explicit evidence requirements.
-5. Fix the UI outside the verifier core; use `visual-fix-loop` if the task needs orchestration across reproduce, fix, recapture, and proof.
-6. Use `browser-capture` to collect after screenshot metadata and required after video metadata.
-7. Refresh DOM evidence and primitives with `dom-bridge` and `visual-primitives` when needed.
-8. Use `visual-proof` to evaluate the complete proof and save the report next to the bug fix evidence.
-
-See the five `skills/*/SKILL.md` files for full Pi skill instructions.
 
 ## Schema
 
@@ -119,6 +141,8 @@ This repository is intended to be safe to make public as source code and documen
 Generated local outputs are ignored for both git and npm packing under `.visual-proof/`, `.visual-proof-test-output/`, `artifacts/`, and `.pi-autobrowse/`.
 
 ## Remaining non-goals
+
+These are deliberate boundaries, not missing features:
 
 - The verifier only checks supplied primitives and evidence.
 - It does not inspect image pixels, inspect live DOM, or verify that screenshot/video files exist.
